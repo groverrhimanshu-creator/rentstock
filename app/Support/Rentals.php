@@ -347,8 +347,9 @@ class Rentals
                 $now = now();
                 self::addHistory(array_map(fn ($c) => ['code' => $c, 'at' => $now, 'text' => 'Sale cancelled · invoice ' . $r->no . ' deleted', 'user_id' => $userId], $codes));
             }
+            $unstocked = Stock::unstocked(array_column(array_filter($sold->all(), fn ($l) => !$l->code), 'item_id'));
             foreach ($sold as $l) {
-                if (!$l->code) {
+                if (!$l->code && !isset($unstocked[(int) $l->item_id])) {
                     DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$l->item_id, $l->qty]);
                 }
             }

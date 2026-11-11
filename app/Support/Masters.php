@@ -151,9 +151,11 @@ class Masters
                     ['name' => 'sale_price', 'label' => 'Sale price', 'type' => 'number', 'min' => 0, 'default' => '0'],
                     ['name' => 'tracked', 'label' => 'Kind', 'type' => 'yesno', 'noblank' => true,
                         'yes' => 'Barcoded (one barcode per piece)', 'no' => 'By quantity (no barcode)', 'default' => '1'],
+                    ['name' => 'maintain_stock', 'label' => 'Maintain stock', 'type' => 'yesno', 'noblank' => true,
+                        'yes' => 'Yes (count the stock)', 'no' => 'No (not counted in stock, for quantity items)', 'default' => '1'],
                 ],
                 'cols' => [['name', 'Item'], ['brand', 'Brand'], ['category', 'Category'], ['hsn', 'HSN'],
-                    ['rent_per_month', 'Rent / month', 'money'], ['sale_price', 'Sale price', 'money'], ['tracked', 'Kind', 'kind']],
+                    ['rent_per_month', 'Rent / month', 'money'], ['sale_price', 'Sale price', 'money'], ['tracked', 'Kind', 'kind'], ['maintain_stock', 'Stock', 'stockflag']],
                 'search' => ['i.name', 'b.name', 'c.name', 'i.hsn'],
             ],
             'bank' => [

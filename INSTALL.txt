@@ -236,3 +236,27 @@ A manual list is in TEST-CHECKLIST.txt.
 AFTER COPYING THE FILES run:  php artisan optimize:clear
 
 SPEED (step 23): run php artisan migrate - it adds database indexes. Dashboard counts now use one query. See HOSTING-GUIDE.txt.
+
+
+=== STEP 24 (item import, Maintain stock) ===
+RUN:  php artisan migrate     (adds the "Maintain stock" column to items; every existing item stays Yes)
+then: php artisan optimize:clear
+
+IMPORT ITEMS (Masters > Item > Import items)
+Upload the client's Item master sheet (CSV or Excel .xlsx). Columns are found by name:
+Product Name, Category, Brand, Unit, HSN Code (or SAC Code), Rental Price, Sale Price, CGST, SGST, IGST,
+Parameterized, Generate Barcode, Maintain Stock. Other columns (MRP, Purchase Price, Discount ...) are ignored.
+ - Missing categories, brands and units are created automatically.
+ - Items already in the master (same name, any capital letters/spaces) are skipped, not changed.
+ - Names repeated inside the file: the first is kept, the rest are skipped.
+ - Rental Price becomes Rent per month, Sale Price becomes Sale price. GST = CGST + SGST (or IGST); empty = 18.
+ - Generate Barcode = Yes -> barcoded item (one barcode per piece). Otherwise counted by quantity.
+   When Parameterized and Generate Barcode are both Yes the barcode wins.
+ - Maintain Stock = No (quantity items only): the item is not counted in stock. Buying adds no stock, selling checks and
+   takes no stock, and it can always be put on a sale or rental invoice. Barcoded items are always kept in stock.
+ - Up to 20,000 rows and 10 MB per file.
+The same "Maintain stock" box is on the Item form (Masters > Item).
+
+IMPORT SCREENS (Stock import and Import items)
+ - The name of the chosen file is shown next to "Choose file" (and stays there after the file is read and checked).
+ - "Download sample file" gives a CSV with the columns the import needs and example rows.

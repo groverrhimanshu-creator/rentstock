@@ -75,6 +75,20 @@ class Stock
     /* History lines that are normal for a piece that never left the shelf. Anything else (rented, returned, repaired...) counts as movement. */
     private const QUIET = ['Opening stock%', 'Purchased from%', 'Details edited%', 'Sold to%', 'Sale cancelled%', 'Invoice %'];
 
+    /*
+     * Quantity items the Item master says "Maintain stock = No" for. No count is kept for them: buying adds nothing,
+     * selling checks and takes nothing. Returns item id => true. Barcoded items are always kept in stock.
+     */
+    public static function unstocked(array $itemIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $itemIds)));
+        if (!$ids) {
+            return [];
+        }
+        return DB::table('items')->whereIn('id', $ids)->where('tracked', 0)->where('maintain_stock', 0)->pluck('id')
+            ->mapWithKeys(fn ($id) => [(int) $id => true])->all();
+    }
+
     /* How many of the pieces in $codes (a list of codes or a sub-query) have history beyond the quiet lines above. */
     public static function movedCount($codes): int
     {

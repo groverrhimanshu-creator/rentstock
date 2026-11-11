@@ -169,11 +169,12 @@
 
     /* ---- quantity items ---- */
     $('qadd').addEventListener('click', function () {
-        var id = $('qitem').value, n = parseInt($('qqty').value, 10), left = Number($('qitem').options[$('qitem').selectedIndex].getAttribute('data-left')) || 0;
+        var opt = $('qitem').options[$('qitem').selectedIndex];
+        var id = $('qitem').value, n = parseInt($('qqty').value, 10), left = Number(opt.getAttribute('data-left')) || 0, unl = opt.getAttribute('data-unl') === '1';
         if (!id) { err('Choose a quantity item first.'); return; }
         if (!(n >= 1)) { err('Quantity must be a whole number of 1 or more.'); return; }
         var have = lines.filter(function (l) { return !l.code && String(l.item_id) === id; })[0];
-        if ((have ? have.qty : 0) + n > left) { err('Only ' + left + ' left in stock.'); return; }
+        if (!unl && (have ? have.qty : 0) + n > left) { err('Only ' + left + ' left in stock.'); return; }
         if (have) { have.qty += n; } else { lines.push({ code: null, bc: '', item_id: +id, name: C.items[id].name, qty: n, price: C.items[id].price }); }
         err(''); render();
     });

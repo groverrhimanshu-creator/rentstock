@@ -5,6 +5,7 @@ use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ConsumptionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ItemImportController;
 use App\Http\Controllers\LoginsController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\PageController;
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::get('/device/{code}', [StockController::class, 'device'])->whereNumber('code')->name('stock.device');
         Route::get('/entries', [StockController::class, 'entries'])->name('stock.entries');
         Route::get('/import', [StockController::class, 'importShow'])->name('stock.import');
+        Route::get('/import/sample', [StockController::class, 'importSample'])->name('stock.import.sample');
         Route::post('/import/read', [StockController::class, 'importRead'])->name('stock.import.read');
         Route::post('/import/check', [StockController::class, 'importCheck'])->name('stock.import.check');
         Route::post('/import/commit', [StockController::class, 'importCommit'])->name('stock.import.commit');
@@ -112,6 +114,12 @@ Route::middleware(['auth', 'role'])->group(function () {
 
     // Masters, customer logins and the company profile are for the Admin only.
     Route::middleware('role:admin')->group(function () {
+        Route::get('/items/import', [ItemImportController::class, 'show'])->name('items.import');
+        Route::get('/items/import/sample', [ItemImportController::class, 'sample'])->name('items.import.sample');
+        Route::post('/items/import/read', [ItemImportController::class, 'read'])->name('items.import.read');
+        Route::post('/items/import/check', [ItemImportController::class, 'check'])->name('items.import.check');
+        Route::post('/items/import/errors', [ItemImportController::class, 'errors'])->name('items.import.errors');
+        Route::post('/items/import/commit', [ItemImportController::class, 'commit'])->name('items.import.commit');
         Route::get('/masters/{key}', [MasterController::class, 'index'])->name('masters.index');
         Route::get('/masters/{key}/create', [MasterController::class, 'create'])->name('masters.create');
         Route::get('/masters/{key}/{id}/items', [MasterController::class, 'assoc'])->whereNumber('id')->name('masters.assoc');

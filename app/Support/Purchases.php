@@ -59,7 +59,7 @@ class Purchases
                     }
                     ConfigLog::addMany($cfglog);
                     $added += $l['qty'];
-                } else {
+                } elseif (!Stock::unstocked([$item->id])) {
                     DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$item->id, $l['qty']]);
                 }
             }
@@ -84,7 +84,11 @@ class Purchases
             return 'This purchase cannot be deleted. ' . $n . ' of its barcoded items have been rented, returned or changed before.';
         }
         $qty = DB::table('purchase_lines')->where('purchase_id', $id)->where('barcoded', 0)->groupBy('item_id')->selectRaw('item_id, sum(qty) as q')->get();
+        $unstocked = Stock::unstocked($qty->pluck('item_id')->all());
         foreach ($qty as $l) {
+            if (isset($unstocked[(int) $l->item_id])) {
+                continue;   // not counted in stock, nothing to take back
+            }
             $have = (int) DB::table('item_qty')->where('item_id', $l->item_id)->value('qty');
             if ($have < (int) $l->q) {
                 $name = (string) DB::table('items')->where('id', $l->item_id)->value('name');
@@ -106,8 +110,9 @@ class Purchases
                 throw new \RuntimeException($m);
             }
             $lines = DB::table('purchase_lines')->where('purchase_id', $id)->get();
+            $unstocked = Stock::unstocked($lines->where('barcoded', 0)->pluck('item_id')->all());
             foreach ($lines as $l) {
-                if (!$l->barcoded) {
+                if (!$l->barcoded && !isset($unstocked[(int) $l->item_id])) {
                     DB::table('item_qty')->where('item_id', $l->item_id)->decrement('qty', $l->qty);
                 }
             }

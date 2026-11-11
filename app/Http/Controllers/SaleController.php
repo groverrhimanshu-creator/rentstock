@@ -36,7 +36,10 @@ class SaleController extends Controller
             'items' => DB::table('items')->get(['id', 'name', 'gst_percent', 'sale_price', 'hsn'])->keyBy('id'),
             'stockItems' => DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->where('d.status', 'in_stock')
                 ->groupBy('i.id', 'i.name')->orderBy('i.name')->get(['i.id', 'i.name', DB::raw('count(*) as n')]),
-            'qtyItems' => DB::table('item_qty as q')->join('items as i', 'i.id', '=', 'q.item_id')->where('q.qty', '>', 0)->orderBy('i.name')->get(['i.id', 'i.name', 'q.qty']),
+            // Items with stock left, plus the quantity items that are not counted in stock (qty null = always available).
+            'qtyItems' => DB::table('item_qty as q')->join('items as i', 'i.id', '=', 'q.item_id')->where('q.qty', '>', 0)->where('i.maintain_stock', 1)->get(['i.id', 'i.name', 'q.qty'])
+                ->concat(DB::table('items')->where('tracked', 0)->where('maintain_stock', 0)->get(['id', 'name'])->map(fn ($i) => (object) ['id' => $i->id, 'name' => $i->name, 'qty' => null]))
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values(),
             'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
             'prefix' => Barcodes::prefix(),
             'billFrom' => date('Y-m-d'),

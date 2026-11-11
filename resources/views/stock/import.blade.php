@@ -8,12 +8,15 @@
     @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
     <form method="post" action="{{ route('stock.import.read') }}" enctype="multipart/form-data" class="rowx" style="margin:10px 0">
         @csrf
-        <label class="ab" style="cursor:pointer">Choose file<input type="file" name="file" accept=".csv,.txt,.xlsx" hidden onchange="this.form.submit()"></label>
+        <label class="ab" style="cursor:pointer">Choose file<input type="file" name="file" accept=".csv,.txt,.xlsx" hidden onchange="if(this.files[0]){document.getElementById('fname').textContent='Selected file: '+this.files[0].name;}this.form.submit()"></label>
+        <a class="ab" href="{{ route('stock.import.sample') }}">Download sample file</a>
         <button type="button" class="ab" onclick="document.getElementById('imptext').value=document.getElementById('impsample').value">Load sample file</button>
+        <span id="fname" class="hint" style="margin:0">{{ $fname !== '' ? 'Selected file: ' . $fname : 'No file selected' }}</span>
     </form>
     <textarea id="impsample" hidden>{{ $sample }}</textarea>
     <form id="checkform" method="post" action="{{ route('stock.import.check') }}">
         @csrf
+        <input type="hidden" name="fname" value="{{ $fname }}">
         <label class="f"><span>File contents</span><textarea id="imptext" name="text" rows="7" class="mono">{{ $text }}</textarea></label>
         <div class="rowx" style="margin-top:10px"><button class="ab solid">Check file</button></div>
     </form>
@@ -37,6 +40,7 @@
     @if ($bad)
     <form method="post" action="{{ route('stock.import.errors') }}" style="margin:0 0 12px">
         @csrf
+        <input type="hidden" name="fname" value="{{ $fname }}">
         <textarea name="text" hidden>{{ $text }}</textarea>
         <button class="ab">Download error report ({{ $bad }} rows)</button>
         <span class="hint" style="margin-left:8px">A CSV with every row that has a problem and the reason. Fix the rows and import that file again.</span>
@@ -67,6 +71,7 @@
     @endif
     <form method="post" action="{{ route('stock.import.commit') }}" style="margin-top:12px">
         @csrf
+        <input type="hidden" name="fname" value="{{ $fname }}">
         <textarea name="text" hidden>{{ $text }}</textarea>
         <button class="ab solid" @disabled(!$good)>Import {{ $good }} good rows</button>
     </form>

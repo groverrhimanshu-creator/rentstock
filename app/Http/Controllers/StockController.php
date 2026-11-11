@@ -271,17 +271,36 @@ class StockController extends Controller
         return redirect()->route('stock.entries')->with('ok', $count . ' items added to stock');
     }
 
+    /* The sample sheet: the column names and up to 3 example rows made from real items in the Item master. */
+    private function sampleLines(): array
+    {
+        $prefix = Barcodes::prefix();
+        $sample = [ImportCheck::HEADERS];
+        $next = Barcodes::peek();
+        $items = DB::table('items')->where('tracked', 1)->orderBy('id')->limit(3)->get(['name']);
+        foreach ($items as $i => $it) {
+            $sample[] = '1,' . $it->name . ',' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 7)) . ',' . $it->name . ',' . $prefix . ($next + $i) . ',Main Store';
+        }
+        if ($items->isEmpty()) {
+            $sample[] = '1,Latitude 7490,ABC1234,i5/8th/16gb/256,' . $prefix . $next . ',Main Store';
+        }
+        return $sample;
+    }
+
+    /* "Download sample file": a CSV with the columns the import needs. */
+    public function importSample()
+    {
+        $lines = $this->sampleLines();
+        return response()->streamDownload(function () use ($lines) {
+            echo "\xEF\xBB\xBF" . implode("\r\n", $lines) . "\r\n";   // BOM so Excel reads it as UTF-8
+        }, 'stock-import-sample.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     private function importData(string $text, ?array $report, ?string $error = null): array
     {
         $req = request();
-        $prefix = Barcodes::prefix();
-        // A sample the person can load to see how the sheet should look: real items from the Item master.
-        $sample = [ImportCheck::HEADERS];
-        $next = Barcodes::peek();
-        foreach (DB::table('items')->where('tracked', 1)->orderBy('id')->limit(3)->get(['name']) as $i => $it) {
-            $sample[] = '1,' . $it->name . ',' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 7)) . ',' . $it->name . ',' . $prefix . ($next + $i) . ',Main Store';
-        }
-        return ['per' => \App\Support\Pager::size($req->input('per')), 'page' => (int) $req->input('page', 1), 'text' => $text, 'report' => $report, 'error' => $error, 'headers' => ImportCheck::HEADERS, 'sample' => implode("\n", $sample)];
+        $fname = $req->hasFile('file') ? $req->file('file')->getClientOriginalName() : (string) $req->input('fname', '');
+        return ['per' => \App\Support\Pager::size($req->input('per')), 'page' => (int) $req->input('page', 1), 'text' => $text, 'report' => $report, 'error' => $error, 'headers' => ImportCheck::HEADERS, 'sample' => implode("\n", $this->sampleLines()), 'fname' => mb_substr($fname, 0, 150)];
     }
 
     private function report(string $text): array

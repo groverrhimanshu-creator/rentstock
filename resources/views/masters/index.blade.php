@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $m['title'] . ' list')
 @section('content')
-<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a></div>
+<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><div class="rowx">@if ($key === 'item')<a class="ab" href="{{ route('items.import') }}">Import items</a>@endif<a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a></div></div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw">
@@ -20,6 +20,8 @@
                                 <td><button type="button" class="link js-assoc" data-url="{{ route('masters.assoc', [$key, $r->id]) }}" data-export="{{ route('masters.assoc.export', [$key, $r->id]) }}" title="Show the items">{{ (int) $v }}</button></td>
                             @elseif (($c[2] ?? '') === 'kind')
                                 <td>{{ $v ? 'Barcoded' : 'By quantity' }}</td>
+                            @elseif (($c[2] ?? '') === 'stockflag')
+                                <td>{{ $r->tracked || $v ? 'Yes' : 'No' }}</td>
                             @else
                                 <td>{{ trim((string) $v) }}</td>
                             @endif

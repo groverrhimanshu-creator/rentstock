@@ -48,7 +48,8 @@ class Sales
                     $need[$l['item_id']] = ($need[$l['item_id']] ?? 0) + $l['qty'];
                 }
             }
-            // Quantity items: lock the count and make sure there is enough.
+            // Items that are not counted in stock need no check. The rest: lock the count and make sure there is enough.
+            $need = array_diff_key($need, Stock::unstocked(array_keys($need)));
             foreach ($need as $itemId => $qty) {
                 $have = (int) DB::table('item_qty')->where('item_id', $itemId)->lockForUpdate()->value('qty');
                 if ($have < $qty) {
@@ -116,6 +117,7 @@ class Sales
                 $need[$l['item_id']] = ($need[$l['item_id']] ?? 0) + $l['qty'];
             }
         }
+        $need = array_diff_key($need, Stock::unstocked(array_keys($need)));
         foreach ($need as $itemId => $qty) {
             $have = (int) DB::table('item_qty')->where('item_id', $itemId)->lockForUpdate()->value('qty');
             if ($have < $qty) {
@@ -130,11 +132,12 @@ class Sales
     {
         $now = now();
         $history = [];
+        $unstocked = Stock::unstocked(array_column(array_filter($lines, fn ($l) => !$l['code']), 'item_id'));
         foreach ($lines as $l) {
             if ($l['code']) {
                 DB::table('devices')->where('code', $l['code'])->update(['status' => 'sold', 'customer_id' => $customer->id]);
                 $history[] = ['code' => $l['code'], 'at' => $now, 'text' => 'Sold to ' . $customer->name . ' · invoice ' . $no, 'user_id' => $userId];
-            } else {
+            } elseif (!isset($unstocked[(int) $l['item_id']])) {
                 DB::table('item_qty')->where('item_id', $l['item_id'])->decrement('qty', $l['qty']);
             }
         }
@@ -258,8 +261,9 @@ class Sales
                     DB::table('device_history')->insert($chunk);
                 }
             }
+            $unstocked = Stock::unstocked(array_column(array_filter($lines->all(), fn ($l) => !$l->code), 'item_id'));
             foreach ($lines as $l) {
-                if (!$l->code) {
+                if (!$l->code && !isset($unstocked[(int) $l->item_id])) {
                     DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$l->item_id, $l->qty]);
                 }
             }

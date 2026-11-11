@@ -38,7 +38,7 @@
         <p class="hint" id="stock-more"></p>
         <div class="f" style="margin-top:14px"><span>Quantity item (no barcode)</span>
             <div class="rowx">
-                <select id="qitem" style="flex:2;max-width:380px"><option value="">Select</option>@foreach ($qtyItems as $i)<option value="{{ $i->id }}" data-left="{{ $i->qty }}">{{ $i->name }} · {{ $i->qty }} left</option>@endforeach</select>
+                <select id="qitem" style="flex:2;max-width:380px"><option value="">Select</option>@foreach ($qtyItems as $i)<option value="{{ $i->id }}" data-left="{{ $i->qty }}" @if ($i->qty === null)data-unl="1"@endif>{{ $i->name }}@if ($i->qty !== null) · {{ $i->qty }} left @else · not counted in stock @endif</option>@endforeach</select>
                 <input class="cell" type="number" min="1" id="qqty" value="1" style="width:70px"><button type="button" class="ab" id="qadd">Add</button>
             </div>
         </div>
