@@ -1,0 +1,238 @@
+PRINT BARCODES > FIND ONE BARCODE: MANY LABELS AT ONCE  (step 22)
+-----------------------------------------------------------------
+The search result list now has a tick box on every row (any status: in stock, on rent, sold, in repair), "Tick all shown", "Clear"
+and "Print selected labels (N)". The labels open together, one per page, in the new label layout (up to 500 at a time).
+The list shows up to 50 matches (was 10). The "Print label" button of a row still prints only that row.
+No database change. php artisan optimize:clear, then Ctrl+F5.
+
+PAGINATION ON EVERY LONG LIST  (step 21)
+----------------------------------------
+Every list now shows 20 rows a page by default. "Show" lets you choose 10, 20, 50 or 100, and the Prev / page numbers / Next bar
+sits under the table. This is one rule in app/Support/Pager.php (change DEFAULT or SIZES there to change the whole system).
+New: Reports (all four tabs; "Download CSV" still contains every row) and the Payments > Unpaid invoices list now have paging.
+Lists that already had paging (Masters, Inventory, Stock entries, Purchase, Sale, Rental, Return, Replacement, Upgrade Assets,
+Logins, the customer portal and the import error list) now start at 20 instead of 10.
+No database change. php artisan optimize:clear, then Ctrl+F5.
+
+UPGRADE ASSETS  (step 20)
+-------------------------
+1. "Barcode Consumption (upgrades)" is now "Upgrade Assets" (menu, page titles).
+2. The type list is now: RAM, SSD, Part replacement.
+   RAM and SSD: the old value comes from the device, the new value is chosen from the parts in stock (name the stock item with its size,
+   for example "RAM 16 GB DDR4" or "SSD 512 GB"); the config is updated and the part leaves stock.
+   Part replacement: type what was replaced (Battery, Keyboard, ...). Taking a part from stock is optional. The config does not change.
+   Several Part replacement rows can be added in one upgrade.
+3. Log: every upgrade or part replacement is written with its date, who did it, and the config before and after, in
+   - Stock > Inventory > open the item > "Configuration log" (everything since purchase, in order),
+   - the item History,
+   - Upgrade Assets list ("Full log" opens the item), and "Export log" downloads the whole list as a CSV file.
+No database change. php artisan view:clear, then Ctrl+F5.
+
+REPLACEMENT: SAME CATEGORY ONLY (step 19)
+---------------------------------------
+Replace with lists only items of the faulty item's own category (same model first, then other models of that category).
+The search box under it searches inside that category only, and the server refuses a replacement from another category.
+No database change. php artisan view:clear, then Ctrl+F5.
+
+RENTAL CHALLAN: EXPECTED DURATION (step 18)
+------------------------------------------
+New challan and Edit challan have "Expected duration" (starts on Select). The return date appears only after Short term is chosen (and is required); Long term keeps it hidden and saves no date.
+A long-term challan is never listed as overdue. The printed challan says "Short term · date" or "Long term".
+No database change. php artisan view:clear, then Ctrl+F5.
+
+PRINTED RENTAL INVOICE (step 17b)
+---------------------------------
+Rent rows print only the category name, for example "Laptop Rent" (no model, config or barcodes). Sold rows print only the item name.
+No database change. php artisan view:clear, then Ctrl+F5.
+
+RENTAL INVOICE, HSN/SAC AND SOLD ITEMS ON ONE INVOICE  (step 17)
+----------------------------------------------------------------
+1. Dates: on New sale > Rental invoice, choosing the customer fills "Bill from" and "Bill to" by itself.
+   Bill to = today. Bill from = the day after the customer's last rental invoice; if there is none, the day their first
+   items went out (or the day the customer was created, if nothing was ever given on rent). Both can be changed.
+2. Rows are by category and price: laptops at the same rent show as one row "Laptop Rent, Qty 2"; a laptop at a different rent
+   gets its own row. The days are no longer shown. Changing the price of a row changes every item in that row.
+3. Pricing: with "Charge the full rent for these dates" ticked (default), an item given before or during the period is charged
+   the full rent from the first day of "Bill from" (the days before "Bill from" are never charged). Example: 5 laptops
+   given on 25 Oct, Bill from 1 Nov to 30 Nov = full month, October not charged; given 15 Oct, Bill from 1 Oct to 30 Oct = full month.
+   Items already returned inside the period are charged only up to the day they came back; replacement items only from
+   the day they arrived. Untick the box to charge only the days each item was actually out. A period of about two months
+   or more is charged as 2, 3... months of rent.
+4. HSN/SAC: rent lines carry 997315 (change it in config/rentstock.php or .env with RENT_SAC). It is shown on the rental
+   challan screen, the rental invoice screen and on both printed documents. The Sale screen shows the HSN of each item.
+5. Sold items on the rental invoice: on New sale > Rental invoice, use the "Sell items on this invoice" box (barcoded items and
+   quantity items). They appear under "Sold on this invoice", leave stock when saved, and print on the same invoice after the
+   rent rows (like Webcam in the client's sample). Deleting that invoice puts them back in stock.
+6. NEW DATABASE CHANGE: run   php artisan migrate   (adds line type and quantity to rental_lines and sets the rent code
+   on existing rent lines to 997315).
+Then: php artisan config:clear, php artisan view:clear, Ctrl+F5.
+
+LABEL LAYOUT AND CONFIGURATION LOG  (step 16)
+---------------------------------------------
+1. Label, top to bottom: KPI SOLUTIONS, barcode, barcode number (KPI600009), Sr.No (brand tag), configuration, item name.
+   The first line and the label size are set in config/rentstock.php (or .env):  LABEL_TITLE="KPI SOLUTIONS"  LABEL_W=50  LABEL_H=25
+   (millimetres). If the client's roll is another size, change LABEL_W / LABEL_H only; fonts and barcode scale with it.
+   Every label made from Print Barcodes uses this layout too.
+2. Configuration log for every barcoded item. It records the config when it came in (purchase or opening stock) and every
+   change after that: upgrade, edit on the item, config corrected in a purchase, and an upgrade that was undone.
+   Each row shows date and time, what happened, config before, config after, detail and who did it.
+   Seen on: Stock > Inventory > open an item ("Configuration log"), and Print Barcodes > Find one barcode.
+3. NEW DATABASE TABLE: run   php artisan migrate   (adds device_config_log). Items that already exist get a first row
+   from what the system knows (the first config comes from their first upgrade) plus a row for each upgrade done so far.
+   Edits made by hand before this update cannot be recovered, they are logged from now on.
+Then: php artisan config:clear, php artisan view:clear, Ctrl+F5.
+
+PRINT LABEL AFTER A CONFIG CHANGE
+---------------------------------
+Edit item: "Save and print label". Barcode Consumption (upgrade): "Save and print label" and a "Print label" link on every
+row of the list. Item details page: "Print label". The label (50 x 25 mm) also shows the config.
+No database change. php artisan view:clear, then Ctrl+F5.
+
+RETURN FORM
+-----------
+Reasons are now: Rent period over, Project closed, Customer reduced seats.
+Condition is Good or Damaged/Faulty; a note is required for Damaged/Faulty (checked on screen and again on the server).
+Rental invoice lines now say "1 day" instead of "1 days".
+No database change. php artisan view:clear, then Ctrl+F5.
+
+RENTAL INVOICE: EMPTY LIST EXPLAINED
+------------------------------------
+The rental invoice lists only items that were on rent inside "Bill from" - "Bill to" (it starts with last month).
+If the rental began after that period the list is empty, and the screen now says why and offers "Use these dates".
+
+ROUND 3 CHANGES
+---------------
+1. Brand / Category "Associated items" pop-up and its CSV now list every barcode of each item (barcode, brand tag,
+   config, status, customer it is with). Quantity items show their stock count instead of a barcode.
+2. New purchase: each row shows the barcodes it will get, and a total line shows the full range before you save.
+   Edit purchase: each row shows the barcodes already made for it.
+No database change. php artisan view:clear, then Ctrl+F5.
+
+PAGE STUCK LOADING (blank page, spinner)
+----------------------------------------
+Check that MySQL is running in XAMPP. The fonts now load in the background, so a slow or blocked internet
+connection no longer holds up the page (text then uses the normal system font until the font arrives).
+
+COMPANY PROFILE LEFT EMPTY
+--------------------------
+php artisan migrate clears the company name, address, GSTIN, PAN, phone, email and bank details (only if they still
+hold the placeholder or the earlier KPI details). Fill them in under Company Profile when you want them on documents.
+The state code and the barcode prefix are kept.
+
+TEST EMAIL BUTTON
+-----------------
+Payments & Reminders now has "Test the email settings": type any address and press "Send test email".
+Free dummy inbox for testing: sign up at mailtrap.io, open Email Testing > Inboxes > SMTP settings, and put the
+shown host / port / username / password in .env (MAIL_MAILER=smtp), then php artisan config:clear.
+
+CLIENT CHANGES (round 2)
+------------------------
+1. Brand and Category lists: new column "Associated items". Click the count to see the items in a pop-up
+   and press "Export list" to download them as a CSV (opens in Excel).
+2. Customers: while adding a customer, tick "Create a login for this customer" and enter username and password.
+   (If a customer has no login yet, the same option appears when editing.) Customer Logins still works as before.
+3. Import Stock: when rows have problems, press "Download error report" to get a CSV of those rows with the reason.
+No database change. Just copy the files, then:  php artisan view:clear   and press Ctrl+F5.
+
+NEW LOOK (KPI SOLUTIONS design)
+-------------------------------
+This pack also carries the approved new design: logo, navy sidebar, new login, new invoice header.
+Only styling and layout changed. Every function (add / edit / delete on masters, rental, return,
+replacement, upgrades, reminders, etc.) works exactly as before.
+After copying the files run:   php artisan migrate     (fills the KPI address, GSTIN, bank etc.
+into Company Profile; the company NAME is left for you to type later)  and   php artisan view:clear
+Then press Ctrl+F5 in the browser so the new theme.css loads.
+
+STEP 5: RENTAL, RETURN, REPLACEMENT, UPGRADES, BARCODES, PAYMENTS, REPORTS, CUSTOMER LOGIN
+==========================================================================================
+
+1. Stop "php artisan serve" (Ctrl+C).
+2. Unzip. Copy the folders app, bootstrap, config, database, public, resources,
+   routes and tests INTO C:\xampp\htdocs\rentstock  (Replace all).
+3. In Command Prompt:
+
+   cd C:\xampp\htdocs\rentstock
+   php artisan migrate
+   php artisan view:clear
+   php artisan serve
+
+   (migrate adds new tables: rentals, rental_lines, returns, return_lines, replacements,
+   consumptions, reminders, settings, and one new column devices.rent_no.
+   Do NOT use migrate:fresh once you have data.)
+4. Press Ctrl+F5 in the browser.
+
+WHAT IS NEW (all screens as in the final prototype)
+Rental          + New Challan: pick the customer, scan or tick items from stock, set the rent of each
+                item (the item's rent from the Item master is filled in), expected return date.
+                Saving puts the items "On rent" and creates the delivery challan (Ch 2143, 2144, ...).
+Sale            "Sale / Rent" now has two options: Sale, and Rental invoice (items listed automatically).
+                Rental invoice: choose customer, Bill from / Bill to. Everything that customer had on rent
+                in those dates is listed, charged only for the days it was out
+                (monthly rent x days out / days in the period). Amounts can be changed.
+                Stock does not change. Invoice numbers continue the same series as sale invoices.
+Return          Choose customer, tick or scan the items that came back, reason / condition / notes per item.
+                Good -> back in stock. Damaged -> In repair.
+Replacement     Rental received: faulty item goes to repair, the new item goes on rent at the same rent.
+                Sales received (credit note): faulty item to repair, credit note number made, new item sold.
+Barcode Consumption (upgrades)
+                Find the device, choose RAM / Hard disk / Battery from parts IN STOCK. Config changes
+                (8gb -> 16gb), the part leaves stock, the barcode stays, history is written.
+                For parts to appear: add them in Purchase as items kept by QUANTITY (no barcode),
+                with names such as "16GB RAM DDR5 Laptop", "512GB SSD", "7490 Battery".
+Print Barcodes  Labels 50 x 25 mm (tick items, "Make labels"), and Find one barcode with its history.
+Payments & Reminders
+                Unpaid sale and rental invoices (due 15 days after the invoice date), Remind, Paid,
+                Send reminders to all overdue, automatic reminder every 3/5/7/10/15 days.
+Reports         Stock summary, On rent by customer, Overdue returns, Sales register + Download CSV.
+Customer login  My Rentals, Invoices & Challans (can open and print), Return History.
+Dashboard       Payments overdue and Latest rentals are now live.
+
+Admin only: Edit and Delete on challans, rental invoices, returns, replacements and upgrades.
+Delete puts everything back as it was, and is refused with a clear message when the items have moved on.
+
+E-MAIL REMINDERS (read this)
+By default Laravel does not send real e-mail: it writes the e-mail text into
+storage\logs\laravel.log (MAIL_MAILER=log). The "Reminder log" on the Payments screen still fills.
+To send real e-mail put your SMTP details in the file .env, for example:
+
+   MAIL_MAILER=smtp
+   MAIL_HOST=smtp.yourprovider.com
+   MAIL_PORT=587
+   MAIL_USERNAME=accounts@yourcompany.com
+   MAIL_PASSWORD=your-password
+   MAIL_ENCRYPTION=tls
+   MAIL_FROM_ADDRESS="accounts@yourcompany.com"
+   MAIL_FROM_NAME="${APP_NAME}"
+
+then run:  php artisan config:clear
+
+AUTOMATIC DAILY REMINDERS
+The reminders go out by themselves once per day at 9:00 if the computer/server runs this command every day:
+
+   php artisan reminders:send
+
+On Windows: Task Scheduler -> Create Basic Task -> Daily 9:00 -> Start a program:
+   Program:   C:\xampp\php\php.exe
+   Arguments: artisan reminders:send
+   Start in:  C:\xampp\htdocs\rentstock
+On Linux hosting: cron  * * * * * cd /path/to/rentstock && php artisan schedule:run >> /dev/null 2>&1
+
+Customers need an e-mail address (Masters > Customer) to get a reminder.
+
+
+=== STEP 23 (tests, SubAdmin hidden) ===
+SUBADMIN HIDDEN
+The SubAdmin role is switched off for now: it is not in the login list, existing SubAdmin logins cannot sign in,
+and no SubAdmin can be created. Nothing is deleted. To bring it back later put this line in .env:
+   SUBADMIN_ENABLED=true
+then run:  php artisan config:clear
+
+AUTOMATIC TESTS
+1. In phpMyAdmin create an empty database called  rentstock_test
+2. Run:  php artisan test
+The tests refuse to run on any database not ending in _test, so your real data is safe.
+A manual list is in TEST-CHECKLIST.txt.
+
+AFTER COPYING THE FILES run:  php artisan optimize:clear
+
+SPEED (step 23): run php artisan migrate - it adds database indexes. Dashboard counts now use one query. See HOSTING-GUIDE.txt.

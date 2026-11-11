@@ -1,0 +1,43 @@
+RENTSTOCK - TEST CHECKLIST (before the client tests on real data)
+=================================================================
+A. AUTOMATIC TESTS (5 minutes)
+  1. phpMyAdmin -> create an empty database named:  rentstock_test
+  2. In the project folder:   php artisan test
+     (The tests only run on a database whose name ends with _test. Your real data is never touched.)
+  3. If anything fails, copy the red text and send it to me.
+
+B. MANUAL WALK-THROUGH (use dummy data, then clear it)
+ Login
+  [ ] Admin login works; wrong password refused; Role list shows only Admin and Customer
+  [ ] Customer login goes to the portal and cannot open admin pages
+ Masters
+  [ ] Category, Brand, Unit, Store, Item (check each item is in the RIGHT category), Customer (with state), Supplier
+ Purchase
+  [ ] Laptop purchase WITH barcode, qty 3 -> 3 codes made; battery purchase WITHOUT barcode -> quantity stock
+  [ ] Edit a purchase; delete a purchase that has no movement; delete is refused after items are rented
+ Stock / Barcodes
+  [ ] Inventory search; item details show the Configuration log
+  [ ] Print Barcodes -> Find one barcode -> tick 3 -> "Print selected labels" -> check on the REAL label printer (50x25 mm)
+ Sale
+  [ ] Sale in same state (CGST+SGST) and other state (IGST); print; edit; delete
+ Rental
+  [ ] Challan: short term asks for a date, long term hides it; HSN 997315 shown
+  [ ] Rental invoice: dates fill automatically; rows grouped by category and rate; qty 2 when same rate
+  [ ] Full-month tick box: item given on 15th is charged from the 1st
+  [ ] Sold items added on the same rental invoice; stock goes down; delete restores it
+  [ ] Printed invoice shows only "Laptop Rent" (no description)
+ Return / Replacement / Upgrade
+  [ ] Return good item -> back to stock; damaged -> repair
+  [ ] Replacement lists only the same category
+  [ ] Upgrade Assets: RAM, SSD, Part replacement (free text); config log shows each change; export CSV
+ Payments / Reports
+  [ ] Record a payment; unpaid list; reminder e-mail (needs real SMTP)
+  [ ] Reports, 20 rows per page, change to 50, page links keep the filters
+ Customer portal
+  [ ] Customer sees only his own rentals, invoices, returns
+
+C. BEFORE GO-LIVE
+  [ ] Company Profile filled (name, GSTIN, bank, logo); barcode prefix confirmed
+  [ ] Test data removed (new empty database, php artisan migrate, create admin login)
+  [ ] .env: APP_ENV=production, APP_DEBUG=false, real SMTP, SUBADMIN_ENABLED unchanged (false)
+  [ ] Daily database backup scheduled

@@ -1,0 +1,2 @@
+{{-- A Delete button. Needs $action and $what. Optional: $blocked (a message shown at once instead of asking), $confirm, $cls. --}}
+<form class="js-delete" method="post" action="{{ $action }}" style="margin:0" data-blocked="{{ $blocked ?? '' }}" data-confirm="{{ $confirm ?? ('Delete this ' . $what . '? This cannot be undone.') }}">@csrf @method('DELETE')<button class="ab danger {{ $cls ?? '' }}">Delete</button></form>

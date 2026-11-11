@@ -1,0 +1,14 @@
+RENTSTOCK - HOSTING & SPEED GUIDE
+1. Create an empty MySQL database + user in the hosting panel.
+2. Upload the project (do NOT upload the tests folder, phpunit.xml or .env from your PC). Document root = the public folder.
+3. Make .env:  APP_ENV=production  APP_DEBUG=false  APP_URL=https://their-domain  DB_*  MAIL_*  SUBADMIN_ENABLED=false
+   Also:  SESSION_DRIVER=file  CACHE_STORE=file   (faster than database sessions)
+4. composer install --no-dev -o   (or upload vendor built the same way)
+5. php artisan key:generate
+   php artisan migrate --force
+   php artisan storage:link
+   php artisan config:cache && php artisan route:cache && php artisan view:cache
+6. Create the admin: the CreateLogin command. Fill Company Profile. Confirm barcode prefix.
+7. Cron every minute:  php artisan schedule:run     Daily database backup.
+8. After every update:  php artisan optimize:clear   then the three cache commands again.
+SPEED: PHP 8.2+ with OPcache ON, HTTPS, MySQL on the same server. On your PC turn Xdebug off (that is why login is slow locally).

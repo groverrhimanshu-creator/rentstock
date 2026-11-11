@@ -1,0 +1,1 @@
+<div><h5>{{ $h }}</h5><p><b>{{ $name }}</b><br>{{ $address }}{{ $address ? ', ' : '' }}{{ $city }}<br>{{ $state }}{{ $code ? ' (code ' . $code . ')' : '' }}<br>GSTIN: {{ $gstin ?: '-' }}{!! $phone ? '<br>Phone: ' . e($phone) : '' !!}</p></div>
