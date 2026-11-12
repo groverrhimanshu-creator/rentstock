@@ -101,6 +101,32 @@ class MasterController extends Controller
         return response()->json(['title' => $title, 'name' => $name, 'items' => $items]);
     }
 
+    /* The whole Item list as it is filtered on screen (same search), as a CSV. */
+    public function itemsExport(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $m = Masters::def('item');
+        $query = DB::table('items as i')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->leftJoin('categories as c', 'c.id', '=', 'i.category_id');
+        if ($q !== '') {
+            $query->where(function ($w) use ($m, $q) {
+                foreach ($m['search'] as $col) {
+                    $w->orWhere($col, 'like', '%' . $q . '%');
+                }
+            });
+        }
+        $query->orderBy('i.name')->select('i.name', 'b.name as brand', 'c.name as category', 'i.hsn', 'i.gst_percent', 'i.rent_per_month', 'i.sale_price', 'i.tracked', 'i.maintain_stock');
+        return response()->streamDownload(function () use ($query) {
+            $h = fopen('php://output', 'w');
+            fwrite($h, "\xEF\xBB\xBF");
+            fputcsv($h, ['Item', 'Brand', 'Category', 'HSN', 'GST %', 'Rent / month', 'Sale price', 'Kind', 'Maintain stock'], ',', '"', '');
+            foreach ($query->cursor() as $i) {
+                fputcsv($h, [$i->name, $i->brand, $i->category, $i->hsn, $i->gst_percent, $i->rent_per_month, $i->sale_price,
+                    $i->tracked ? 'Barcoded' : 'By quantity', $i->tracked || $i->maintain_stock ? 'Yes' : 'No'], ',', '"', '');
+            }
+            fclose($h);
+        }, 'items-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     public function assocExport(string $key, int $id)
     {
         [$title, $name, $items] = $this->assocRows($key, $id);

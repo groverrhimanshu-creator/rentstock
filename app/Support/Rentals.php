@@ -174,7 +174,8 @@ class Rentals
             ->where('r.kind', 'challan')->where('r.customer_id', $customerId)
             ->orderBy('r.id')->orderBy('l.id')->get(['l.code', 'l.item_id', 'l.rent', 'l.from_at', 'l.returned_at', 'l.open_replacement_id'])
             ->map(fn ($x) => ['code' => (int) $x->code, 'item_id' => (int) $x->item_id, 'rate' => (float) $x->rent, 'from' => (string) $x->from_at, 'returned' => $x->returned_at, 'repl' => $x->open_replacement_id !== null])->all();
-        $rows = RentMath::billLines($segs, $from, $to, $full);
+        // Pieces that come to ₹0 (rent not set, or nothing to charge) are not listed on the invoice.
+        $rows = array_values(array_filter(RentMath::billLines($segs, $from, $to, $full), fn ($x) => (float) $x['price'] > 0));
         if (!$rows) {
             return [];
         }

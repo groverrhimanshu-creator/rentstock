@@ -17,12 +17,12 @@ class ReplacementController extends Controller
         $q = trim((string) $request->query('q', ''));
         $prefix = Barcodes::prefix();
         $query = DB::table('replacements as r')->join('customers as c', 'c.id', '=', 'r.customer_id')
-            ->select('r.id', 'r.created_at', 'r.kind', 'r.old_code', 'r.new_code', 'r.cn', 'c.name as customer');
+            ->select('r.id', 'r.created_at', 'r.kind', 'r.old_code', 'r.new_code', 'r.cn', 'r.fault', 'r.reason', 'c.name as customer');
         if ($q !== '') {
             $like = '%' . $q . '%';
             $query->where(function ($w) use ($like, $prefix) {
                 $w->where('c.name', 'like', $like)->orWhereRaw('concat(?, r.old_code) like ?', [$prefix, $like])->orWhereRaw('concat(?, r.new_code) like ?', [$prefix, $like])
-                    ->orWhere('r.kind', 'like', $like)->orWhere('r.cn', 'like', $like);
+                    ->orWhere('r.kind', 'like', $like)->orWhere('r.cn', 'like', $like)->orWhere('r.reason', 'like', $like)->orWhere('r.fault', 'like', $like);
             });
         }
         $rows = $query->orderByDesc('r.id')->paginate($n)->withQueryString();
@@ -87,10 +87,18 @@ class ReplacementController extends Controller
         if (!$old || !$new) {
             return $fail('Choose the faulty item and its replacement.');
         }
+        $fault = (string) $request->input('fault', '');
+        if (!in_array($fault, Moves::FAULTS, true)) {
+            return $fail('Choose whether the item is Damaged or Faulty.');
+        }
+        $reason = mb_substr(trim((string) $request->input('reason', '')), 0, 255);
+        if ($reason === '') {
+            return $fail('Please enter the reason for the replacement.');
+        }
         try {
             Moves::createReplacement([
                 'kind' => $kind, 'customer_id' => $customerId, 'old_code' => $old, 'new_code' => $new,
-                'reason' => mb_substr(trim((string) $request->input('reason', '')), 0, 255),
+                'reason' => $reason, 'fault' => $fault,
             ], $request->user()->id);
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());

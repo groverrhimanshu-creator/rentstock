@@ -237,6 +237,9 @@ button.kc:hover{transform:translateY(-2px);border-color:var(--a-sky)}
 .sug{margin-top:4px;border:1px solid var(--a-line);border-radius:12px;background:var(--a-card);box-shadow:var(--a-shadow);max-height:300px;overflow:auto}
 .sugrow{display:flex;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--a-line)}
 .sugrow:first-child{border-top:0}
+.sugrow[data-add],.sugrow[data-addall]{cursor:pointer}
+.sugrow[data-add]:hover,.sugrow[data-addall]:hover{background:var(--a-soft,rgba(0,144,207,.08))}
+.sugall{background:rgba(0,144,207,.06)}
 .sugrow .sgt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sugmore{padding:8px 12px;color:var(--a-muted);font-size:12px}
 @media (max-width:760px){.app{position:relative}.sb{position:absolute;top:0;bottom:0;left:0;z-index:20;box-shadow:6px 0 24px rgba(0,0,0,.25)}.ct{padding:14px 12px}.cd{padding:14px}.pg h2{font-size:20px}}

@@ -8,6 +8,7 @@ use RuntimeException;
 /* Returns, replacements and upgrades (barcode consumption), and undoing them. Each change is one database transaction. */
 class Moves
 {
+    public const FAULTS = ['Damaged', 'Faulty'];
     public const REASONS = ['Rent period over', 'Project closed', 'Customer reduced seats'];
     public const KIND_RENTAL = 'Rental received';
     public const KIND_SALE = 'Sales received (credit note)';
@@ -187,11 +188,11 @@ class Moves
             $fy = Tax::fy($now);
             $cn = $sold ? 'CN/' . $fy . '/' . str_pad((string) Rentals::counter('cn-' . $fy), 3, '0', STR_PAD_LEFT) : null;
             $rid = DB::table('replacements')->insertGetId([
-                'kind' => $d['kind'], 'customer_id' => $customer->id, 'old_code' => $old->code, 'new_code' => $new->code, 'reason' => $d['reason'], 'cn' => $cn,
+                'kind' => $d['kind'], 'customer_id' => $customer->id, 'old_code' => $old->code, 'new_code' => $new->code, 'reason' => $d['reason'], 'fault' => $d['fault'] ?? '', 'cn' => $cn,
                 'rent' => $rent, 'old_return_by' => $old->return_by, 'user_id' => $userId, 'created_at' => $now,
             ]);
             DB::table('devices')->where('code', $old->code)->update(['status' => 'repair', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
-            $oldHist = self::history((int) $old->code, 'Replaced at ' . $customer->name . ' · faulty, sent to repair', $userId, $now);
+            $oldHist = self::history((int) $old->code, 'Replaced at ' . $customer->name . ' · ' . strtolower($d['fault'] ?? 'faulty') . ', sent to repair', $userId, $now);
             if ($sold) {
                 DB::table('devices')->where('code', $new->code)->update(['status' => 'sold', 'customer_id' => $customer->id]);
                 $newHist = self::history((int) $new->code, 'Sold as replacement to ' . $customer->name . ' (credit note ' . $cn . ')', $userId, $now);

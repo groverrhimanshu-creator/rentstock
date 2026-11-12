@@ -18,7 +18,7 @@
     </div>
     <div class="cd"><h3>Add items</h3>
         <div class="f sugwrap"><span>Scan or type a barcode</span>
-            <div class="rowx"><input id="scan" placeholder="Scan, or type {{ $prefix }}6000… or a name such as HP screen" style="flex:1" autocomplete="off"><button type="button" class="ab" id="scanbtn">Add</button></div>
+            <div class="rowx"><input id="scan" placeholder="Scan, or type {{ $prefix }}6000… or a name such as HP screen. Separate several with commas" style="flex:1" autocomplete="off"><button type="button" class="ab" id="scanbtn">Add</button></div>
             <div id="sug"></div>
         </div>
         <div class="f" style="margin-top:12px"><span>Available in stock. Tick an item to add it, untick to remove it.</span>

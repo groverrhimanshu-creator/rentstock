@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $m['title'] . ' list')
 @section('content')
-<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><div class="rowx">@if ($key === 'item')<a class="ab" href="{{ route('items.import') }}">Import items</a>@endif<a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a></div></div>
+<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><div class="rowx">@if ($key === 'item')<a class="ab" href="{{ route('items.export', ['q' => $q]) }}">Export list</a><a class="ab" href="{{ route('items.import') }}">Import items</a>@endif<a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a></div></div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw">

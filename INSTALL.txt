@@ -260,3 +260,22 @@ The same "Maintain stock" box is on the Item form (Masters > Item).
 IMPORT SCREENS (Stock import and Import items)
  - The name of the chosen file is shown next to "Choose file" (and stays there after the file is read and checked).
  - "Download sample file" gives a CSV with the columns the import needs and example rows.
+
+STEP 26 - Reports, exports (client list of 12 Nov)
+- Reports > On rent by customer: customer drop-down, name search, Clear; the item count is a button that opens a pop-up of the items on rent (Export list inside).
+- Reports > new tab "Purchase report": From/To (default: last month to today), Supplier, summary boxes, CSV. Purchases are picked by the invoice date entered on the purchase (the entry date when none). The count opens the purchase lines; "Download item details" gives every line.
+- Masters > Item: "Export list" (CSV of the items matching the search box).
+- Stock entries: "Download" per entry (CSV of the items that entry added).
+- Rental invoice: pieces that come to Rs 0 are not listed.
+No migration. Copy files over, then: php artisan route:clear && php artisan view:clear
+
+STEP 27 - Sale / rental invoice item picker
+- Click anywhere on a suggestion row to add it (not only the Add button).
+- Several items at once: type barcodes and/or names separated by commas, e.g. KPI600001, KPI600002, HP screen. The list shows every match with "Add all". Only barcodes + Enter adds them directly.
+Files: public/assets/sale.js, rental.js, app.css, theme.css, views sale/form + rental/form. No migration.
+
+STEP 28 - Report default dates, replacement
+- Reports > On rent by customer and Purchase report: From/To default to LAST MONTH (1st to last day). On rent now shows the items that were on rent at any time in the dates; the count pop-up and its export use the same dates.
+- Replacement: "Item condition" (Damaged / Faulty) and "Reason" are both compulsory (form and server). Both show in the Replacement list.
+- MIGRATION: php artisan migrate  (adds replacements.fault)
+Then: php artisan route:clear && php artisan view:clear

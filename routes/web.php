@@ -43,6 +43,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::get('/inventory', [StockController::class, 'inventory'])->name('stock.inventory');
         Route::get('/device/{code}', [StockController::class, 'device'])->whereNumber('code')->name('stock.device');
         Route::get('/entries', [StockController::class, 'entries'])->name('stock.entries');
+        Route::get('/entries/{id}/export', [StockController::class, 'entryExport'])->whereNumber('id')->name('stock.entry.export');
         Route::get('/import', [StockController::class, 'importShow'])->name('stock.import');
         Route::get('/import/sample', [StockController::class, 'importSample'])->name('stock.import.sample');
         Route::post('/import/read', [StockController::class, 'importRead'])->name('stock.import.read');
@@ -101,6 +102,10 @@ Route::middleware(['auth', 'role'])->group(function () {
 
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/csv', [ReportController::class, 'csv'])->name('reports.csv');
+        Route::get('/reports/on-rent/{id}', [ReportController::class, 'onRent'])->whereNumber('id')->name('reports.onrent');
+        Route::get('/reports/on-rent/{id}/export', [ReportController::class, 'onRentExport'])->whereNumber('id')->name('reports.onrent.export');
+        Route::get('/reports/purchase/{id}', [ReportController::class, 'purchaseOne'])->whereNumber('id')->name('reports.purchase.one');
+        Route::get('/reports/purchase-lines/csv', [ReportController::class, 'purchaseLinesCsv'])->name('reports.purchase.lines');
     });
 
     // The customer's own login: what they have on rent, their documents and returns.
@@ -120,6 +125,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::post('/items/import/check', [ItemImportController::class, 'check'])->name('items.import.check');
         Route::post('/items/import/errors', [ItemImportController::class, 'errors'])->name('items.import.errors');
         Route::post('/items/import/commit', [ItemImportController::class, 'commit'])->name('items.import.commit');
+        Route::get('/masters/item/export', [MasterController::class, 'itemsExport'])->name('items.export');
         Route::get('/masters/{key}', [MasterController::class, 'index'])->name('masters.index');
         Route::get('/masters/{key}/create', [MasterController::class, 'create'])->name('masters.create');
         Route::get('/masters/{key}/{id}/items', [MasterController::class, 'assoc'])->whereNumber('id')->name('masters.assoc');
