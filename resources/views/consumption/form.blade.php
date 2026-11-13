@@ -24,5 +24,5 @@
     $udata = ['lookupUrl' => $lookupUrl, 'prefix' => $prefix, 'types' => $types, 'oldUps' => old('ups') ? array_values(old('ups')) : []];
 @endphp
 <script>window.UPG = {!! json_encode($udata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
-<script src="{{ asset('assets/consumption.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/consumption.js') }}"></script>
 @endsection

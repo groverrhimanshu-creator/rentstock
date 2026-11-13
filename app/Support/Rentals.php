@@ -53,7 +53,7 @@ class Rentals
             }
             $items = DB::table('items')->whereIn('id', $devs->pluck('item_id')->unique()->all())->get(['id', 'hsn', 'gst_percent'])->keyBy('id');
 
-            $no = 'Ch ' . self::counter('challan', 2143);
+            $no = Numbers::challan();
             $now = now();
             $rid = DB::table('rentals')->insertGetId([
                 'kind' => 'challan', 'no' => $no, 'customer_id' => $customer->id, 'type' => $d['type'], 'pay_mode' => $d['pay_mode'],

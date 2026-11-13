@@ -284,3 +284,10 @@ STEP 29 - Change the item of a barcode; brand tag on purchases
 - Stock > open a piece > Edit: the "Item (model / category)" list appears while the piece is IN STOCK. A piece on rent or sold must be taken back into stock first. Only barcoded items are offered. The change goes to the piece history and the audit log.
 - New purchase: "Brand tag" column. For every "With barcode" row enter one tag per piece, comma separated (count must equal Qty, same rule as the stock import). Barcode numbers stay automatic; the store is the purchase store.
 No migration.  php artisan view:clear
+
+STEP 29b - cache fix
+- Scripts and styles are linked with ?v=<file time> (App\Support\Assets). After an update the browser loads the new file by itself. If a page ever shows old behaviour once, press Ctrl+F5 one time.
+
+STEP 30 - Deleted document numbers are used again
+- Sale / rental invoice (one series), rental challan, return and credit note: a new document takes the LOWEST number not in use. Delete INV 12 and the next invoice is 12 again (also for a number deleted from the middle). Each financial year still starts at 001; challans start at Ch 2143.
+- Code: App\Support\Numbers (the counter row is locked inside the save, so two users never get the same number). No migration.

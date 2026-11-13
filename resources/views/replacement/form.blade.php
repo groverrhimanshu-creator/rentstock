@@ -26,7 +26,7 @@
     $pdata = ['dataUrl' => $dataUrl, 'stockUrl' => $stockUrl, 'rental' => $kinds[0], 'oldSel' => (string) old('old_code'), 'newSel' => (string) old('new_code')];
 @endphp
 <script>window.REP = {!! json_encode($pdata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
-<script src="{{ asset('assets/replacement.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/replacement.js') }}"></script>
 <script>document.getElementById('pf').addEventListener('submit', function (e) {
     var m = !document.getElementById('fault').value ? 'Choose whether the item is Damaged or Faulty.' : (!document.getElementById('reason').value.trim() ? 'Please enter the reason for the replacement.' : '');
     if (m) { e.preventDefault(); e.stopImmediatePropagation(); var b = document.getElementById('clienterr'); b.textContent = m; b.hidden = false; window.scrollTo(0, 0); }

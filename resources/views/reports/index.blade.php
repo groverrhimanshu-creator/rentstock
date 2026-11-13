@@ -69,5 +69,5 @@
         @include('partials.pager')
     @endif
 </div>
-<script src="{{ asset('assets/reportpop.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/reportpop.js') }}"></script>
 @endsection

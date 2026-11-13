@@ -36,5 +36,5 @@
     </div>
     @include('partials.pager')
 </div>
-<script src="{{ asset('assets/assoc.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/assoc.js') }}"></script>
 @endsection

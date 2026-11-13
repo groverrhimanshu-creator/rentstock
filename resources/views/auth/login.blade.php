@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
-<link rel="stylesheet" href="{{ asset('assets/app.css') }}">
-<link rel="stylesheet" href="{{ asset('assets/theme.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/app.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/theme.css') }}">
 </head>
 <body>
 @php($brand = config('rentstock.brand'))
@@ -40,6 +40,6 @@
         </div>
     </div>
 </div>
-<script src="{{ asset('assets/validate.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/validate.js') }}"></script>
 </body>
 </html>

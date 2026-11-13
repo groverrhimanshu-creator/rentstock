@@ -21,5 +21,5 @@
     $tdata = ['itemsUrl' => route('return.items'), 'prefix' => $prefix, 'reasons' => $reasons];
 @endphp
 <script>window.RET = {!! json_encode($tdata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
-<script src="{{ asset('assets/return.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/return.js') }}"></script>
 @endsection

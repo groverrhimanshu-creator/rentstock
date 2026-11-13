@@ -53,5 +53,5 @@
     ];
 @endphp
 <script>window.PURCHASE = {!! json_encode($pdata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
-<script src="{{ asset('assets/purchase.js') }}"></script>
+<script src="{{ \App\Support\Assets::url('assets/purchase.js') }}"></script>
 @endsection

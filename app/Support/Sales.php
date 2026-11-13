@@ -7,14 +7,10 @@ use RuntimeException;
 
 class Sales
 {
-    /* Next invoice number of the financial year, e.g. KPI/26-27/001. Each year starts again at 001. */
+    /* Next invoice number of the financial year, e.g. KPI/26-27/001. Each year starts again at 001. A deleted invoice's number is used again. */
     public static function nextNo(): string
     {
-        $fy = Tax::fy(now());
-        $name = 'sale-' . $fy;
-        DB::statement('INSERT INTO counters (name, value) VALUES (?, LAST_INSERT_ID(1)) ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1)', [$name]);
-        $n = (int) DB::selectOne('SELECT LAST_INSERT_ID() AS id')->id;
-        return Barcodes::prefix() . '/' . $fy . '/' . str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+        return Numbers::invoice();
     }
 
     /*

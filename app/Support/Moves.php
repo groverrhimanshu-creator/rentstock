@@ -68,8 +68,7 @@ class Moves
                     $reasons[] = $it['reason'];
                 }
             }
-            $fy = Tax::fy(now());
-            $no = Barcodes::prefix() . '/' . $fy . '/' . str_pad((string) Rentals::counter('ret-' . $fy), 3, '0', STR_PAD_LEFT);
+            $no = Numbers::returnNo();
             $now = now();
             $rid = DB::table('returns')->insertGetId([
                 'no' => $no, 'customer_id' => $customer->id, 'reason' => mb_substr(implode(', ', $reasons), 0, 255), 'notes' => $d['notes'] ?? '', 'user_id' => $userId, 'created_at' => $now,
@@ -185,8 +184,7 @@ class Moves
                 }
                 $rent = (float) $line->rent;
             }
-            $fy = Tax::fy($now);
-            $cn = $sold ? 'CN/' . $fy . '/' . str_pad((string) Rentals::counter('cn-' . $fy), 3, '0', STR_PAD_LEFT) : null;
+            $cn = $sold ? Numbers::creditNote() : null;
             $rid = DB::table('replacements')->insertGetId([
                 'kind' => $d['kind'], 'customer_id' => $customer->id, 'old_code' => $old->code, 'new_code' => $new->code, 'reason' => $d['reason'], 'fault' => $d['fault'] ?? '', 'cn' => $cn,
                 'rent' => $rent, 'old_return_by' => $old->return_by, 'user_id' => $userId, 'created_at' => $now,
