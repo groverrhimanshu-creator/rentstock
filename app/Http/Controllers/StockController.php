@@ -73,7 +73,8 @@ class StockController extends Controller
     {
         $d = DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->where('d.code', $code)->first(['d.*', 'i.name as model']);
         abort_unless($d, 404);
-        return view('stock.device-edit', ['d' => $d, 'text' => Barcodes::text($code), 'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name'])]);
+        $items = $d->status === 'in_stock' ? DB::table('items as i')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')->where('i.tracked', 1)->orderBy('i.name')->get(['i.id', 'i.name', 'c.name as cat']) : collect();
+        return view('stock.device-edit', ['d' => $d, 'text' => Barcodes::text($code), 'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']), 'items' => $items]);
     }
 
     public function deviceUpdate(Request $request, int $code)
@@ -93,7 +94,22 @@ class StockController extends Controller
         if ($storeId && !DB::table('stores')->where('id', $storeId)->exists()) {
             return $fail('Please choose a store.');
         }
+        // A different item (model / category) can be given only while the piece is in stock. A piece on rent or sold must be taken back first.
+        $itemId = (int) $request->input('item_id', $d->item_id);
+        $newItem = null;
+        if ($itemId && $itemId !== (int) $d->item_id) {
+            if ($d->status !== 'in_stock') {
+                return $fail('The item of ' . Barcodes::text($code) . ' can be changed only when it is in stock. Take it back into stock first.');
+            }
+            $newItem = DB::table('items')->where('id', $itemId)->where('tracked', 1)->first(['id', 'name']);
+            if (!$newItem) {
+                return $fail('Please choose a barcoded item from the list.');
+            }
+        }
         $notes = [];
+        if ($newItem) {
+            $notes[] = 'item ' . DB::table('items')->where('id', $d->item_id)->value('name') . ' to ' . $newItem->name;
+        }
         if ($tag !== $d->brand_tag) {
             $notes[] = 'brand tag ' . $d->brand_tag . ' to ' . $tag;
         }
@@ -103,8 +119,8 @@ class StockController extends Controller
         if ($storeId && (int) $d->store_id !== $storeId) {
             $notes[] = 'store changed';
         }
-        DB::transaction(function () use ($code, $tag, $config, $storeId, $d, $notes, $request) {
-            DB::table('devices')->where('code', $code)->update(['brand_tag' => $tag, 'config' => $config, 'store_id' => $storeId ?: $d->store_id]);
+        DB::transaction(function () use ($code, $tag, $config, $storeId, $d, $notes, $request, $newItem) {
+            DB::table('devices')->where('code', $code)->update(['brand_tag' => $tag, 'config' => $config, 'store_id' => $storeId ?: $d->store_id] + ($newItem ? ['item_id' => $newItem->id] : []));
             if ($config !== $d->config) {
                 ConfigLog::add($code, 'edit', $d->config, $config, 'Config edited on the item', $request->user()->id);
             }

@@ -279,3 +279,8 @@ STEP 28 - Report default dates, replacement
 - Replacement: "Item condition" (Damaged / Faulty) and "Reason" are both compulsory (form and server). Both show in the Replacement list.
 - MIGRATION: php artisan migrate  (adds replacements.fault)
 Then: php artisan route:clear && php artisan view:clear
+
+STEP 29 - Change the item of a barcode; brand tag on purchases
+- Stock > open a piece > Edit: the "Item (model / category)" list appears while the piece is IN STOCK. A piece on rent or sold must be taken back into stock first. Only barcoded items are offered. The change goes to the piece history and the audit log.
+- New purchase: "Brand tag" column. For every "With barcode" row enter one tag per piece, comma separated (count must equal Qty, same rule as the stock import). Barcode numbers stay automatic; the store is the purchase store.
+No migration.  php artisan view:clear

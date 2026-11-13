@@ -17,7 +17,7 @@ class Purchases
     }
 
     /*
-     * $d: supplier_id, inv_no, inv_date, type, pay_mode, store_id, lines => [[item_id, config, qty, rate, barcode (true/false/null)]]
+     * $d: supplier_id, inv_no, inv_date, type, pay_mode, store_id, lines => [[item_id, config, qty, rate, barcode (true/false/null), tags (one brand tag per piece, list)]]
      * One barcode is made for every piece of a "with barcode" row. Other rows only raise the quantity count.
      * Returns [purchase id, number of barcoded pieces added].
      */
@@ -45,7 +45,7 @@ class Purchases
                     $cfglog = [];
                     for ($i = 0; $i < $l['qty']; $i++) {
                         $devices[] = [
-                            'code' => $first + $i, 'item_id' => $item->id, 'config' => $config, 'brand_tag' => self::tag(), 'status' => 'in_stock',
+                            'code' => $first + $i, 'item_id' => $item->id, 'config' => $config, 'brand_tag' => ($l['tags'][$i] ?? '') !== '' ? $l['tags'][$i] : self::tag(), 'status' => 'in_stock',
                             'store_id' => $d['store_id'], 'purchase_id' => $pid, 'purchase_line_id' => $lid, 'created_at' => $now,
                         ];
                         $history[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId];

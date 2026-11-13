@@ -74,8 +74,24 @@ class PurchaseController extends Controller
             if (!DB::table('items')->where('id', $itemId)->exists()) {
                 return $fail('One of the items is not in the Item master.');
             }
+            $bc = ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null);
+            $tags = array_values(array_filter(array_map('trim', preg_split('/[,;\n]+/', (string) ($l['tags'] ?? ''))), fn ($t) => $t !== ''));
+            $tracked = $bc === null ? (bool) DB::table('items')->where('id', $itemId)->value('tracked') : $bc;
+            if ($tracked) {
+                $name = (string) DB::table('items')->where('id', $itemId)->value('name');
+                if (count($tags) !== (int) $qty) {
+                    return $fail('Brand tag: ' . $name . ' needs ' . (int) $qty . ' brand tag' . ((int) $qty === 1 ? '' : 's') . ' (one for each piece, separated by commas). You entered ' . count($tags) . '.');
+                }
+                foreach ($tags as $t) {
+                    if (mb_strlen($t) > 60) {
+                        return $fail('A brand tag can have 60 characters at most.');
+                    }
+                }
+            } else {
+                $tags = [];
+            }
             $lines[] = [
-                'item_id' => $itemId, 'config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'qty' => (int) $qty,
+                'tags' => $tags, 'item_id' => $itemId, 'config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'qty' => (int) $qty,
                 'rate' => $rate === '' ? 0 : round((float) $rate, 2),
                 'barcode' => ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null),
             ];

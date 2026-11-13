@@ -16,6 +16,7 @@
         tr.innerHTML =
             '<td><select name="lines[' + i + '][item_id]" data-f="item"><option value="">Select item</option>' + C.items.map(function (x) { return '<option value="' + x.id + '"' + (String(x.id) === String(v.item_id) ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></td>' +
             '<td><input class="cellw" name="lines[' + i + '][config]" value="' + esc(v.config) + '" placeholder="Config" maxlength="150"></td>' +
+            '<td><input class="cellw" name="lines[' + i + '][tags]" data-f="tags" value="' + esc(v.tags) + '" placeholder="One per piece, comma separated" autocomplete="off"><small class="hint" data-f="tagn"></small></td>' +
             '<td><select name="lines[' + i + '][bc]" data-f="bc"><option value="yes"' + (bc === 'yes' ? ' selected' : '') + '>With barcode</option><option value="no"' + (bc === 'no' ? ' selected' : '') + '>No barcode (count only)</option></select></td>' +
             '<td><input class="cell" type="number" min="1" step="1" name="lines[' + i + '][qty]" data-f="qty" value="' + esc(v.qty == null ? 1 : v.qty) + '"></td>' +
             '<td><input class="cell" type="number" min="0" step="0.01" name="lines[' + i + '][rate]" data-f="rate" value="' + esc(v.rate) + '"></td>' +
@@ -41,6 +42,12 @@
             if (mode === 'intra') { tax += 2 * r2(t * (it ? it.gst : 0) / 200); }
             else if (mode === 'inter') { tax += r2(t * (it ? it.gst : 0) / 100); }
             tr.querySelector('[data-f=del]').style.display = trs.length > 1 ? '' : 'none';
+            // brand tags: one for each barcoded piece
+            var tg = tr.querySelector('[data-f=tags]'), tn = tr.querySelector('[data-f=tagn]'), bcy = tr.querySelector('[data-f=bc]').value === 'yes';
+            var tcount = tg.value.split(/[,;\n]+/).filter(function (x) { return x.trim() !== ''; }).length;
+            tg.disabled = !bcy;
+            tn.textContent = bcy && it ? tcount + ' of ' + Math.floor(q) + ' tags' : '';
+            tn.style.color = bcy && it && tcount !== Math.floor(q) ? '#B3261E' : '';
             // the barcodes this row will get when the purchase is saved
             var cell = tr.querySelector('[data-f=codes]'), n = Math.floor(q);
             if (it && tr.querySelector('[data-f=bc]').value === 'yes' && n > 0 && code) {
@@ -71,6 +78,17 @@
     rows.addEventListener('input', refresh);
     rows.addEventListener('click', function (e) {
         if (e.target.getAttribute('data-f') === 'del') { e.target.closest('tr').remove(); refresh(); }
+    });
+    document.getElementById('pf').addEventListener('submit', function (e) {
+        var bad = '';
+        rows.querySelectorAll('tr').forEach(function (tr) {
+            var it = item(tr.querySelector('[data-f=item]').value), q = Math.floor(Number(tr.querySelector('[data-f=qty]').value) || 0);
+            if (!bad && it && q > 0 && tr.querySelector('[data-f=bc]').value === 'yes') {
+                var n = tr.querySelector('[data-f=tags]').value.split(/[,;\n]+/).filter(function (x) { return x.trim() !== ''; }).length;
+                if (n !== q) { bad = it.name + ' needs ' + q + ' brand tag' + (q === 1 ? '' : 's') + ' (one for each piece, separated by commas). You entered ' + n + '.'; }
+            }
+        });
+        if (bad) { e.preventDefault(); alert(bad); }
     });
     document.getElementById('addline').addEventListener('click', function () { addRow(); });
     document.getElementById('supplier').addEventListener('change', refresh);

@@ -17,7 +17,7 @@
     </div>
     <div class="cd"><h3>Items</h3>
         <div class="tw"><table class="t">
-            <thead><tr><th>Item</th><th>Config</th><th>Barcode?</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th>Barcodes</th><th></th></tr></thead>
+            <thead><tr><th>Item</th><th>Config</th><th>Brand tag</th><th>Barcode?</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th>Barcodes</th><th></th></tr></thead>
             <tbody id="rows"></tbody>
         </table></div>
         <div class="rowx" style="margin-top:10px"><button type="button" class="ab sm" id="addline">+ Add another item</button><button type="button" class="ab sm" id="newitem">+ New item (not in the list)</button></div>
@@ -39,7 +39,7 @@
         </div>
         <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span>GST</span><span id="t-tax">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
         <p class="hint" id="codesum" style="font-weight:600"></p>
-        <div class="msg info">When you save, one {{ \App\Support\Barcodes::prefix() }} barcode is made for every piece marked "With barcode". Rows marked "No barcode" only add to the stock count. The numbers shown above are the next ones in line; they are final once you press Save (if someone else saves a purchase first, you will see the final numbers on the purchase page).</div>
+        <div class="msg info">Brand tag: enter one for each piece of a "With barcode" row, separated by commas (for example ABC1234, ABC1235). When you save, one {{ \App\Support\Barcodes::prefix() }} barcode is made for every piece marked "With barcode". Rows marked "No barcode" only add to the stock count. The numbers shown above are the next ones in line; they are final once you press Save (if someone else saves a purchase first, you will see the final numbers on the purchase page).</div>
         <div class="rowx"><button class="ab solid">Save purchase</button></div>
     </div>
 </form>
