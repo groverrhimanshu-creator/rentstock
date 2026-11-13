@@ -58,6 +58,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
         Route::post('/purchase/quick-item', [PurchaseController::class, 'quickItem'])->name('purchase.quick-item');
         Route::get('/purchase/{id}', [PurchaseController::class, 'show'])->whereNumber('id')->name('purchase.show');
+        Route::get('/purchase/{id}/invoice', [PurchaseController::class, 'invoice'])->whereNumber('id')->name('purchase.invoice');
 
         Route::get('/sale', [SaleController::class, 'index'])->name('sale.index');
         Route::get('/sale/new', [SaleController::class, 'create'])->name('sale.create');
@@ -92,6 +93,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::get('/barcodes', [BarcodeController::class, 'index'])->name('barcodes.index');
         Route::get('/barcodes/label/{code}', [BarcodeController::class, 'label'])->whereNumber('code')->name('barcodes.label');
         Route::post('/barcodes/labels', [BarcodeController::class, 'labels'])->name('barcodes.labels');
+        Route::get('/barcodes/purchase/{id}', [BarcodeController::class, 'purchase'])->whereNumber('id')->name('barcodes.purchase');
 
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::post('/payments/settings', [PaymentController::class, 'settings'])->name('payments.settings');

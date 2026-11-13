@@ -19,6 +19,8 @@ return [
         'title' => env('LABEL_TITLE', 'KPI SOLUTIONS'),
         'w' => (float) env('LABEL_W', 50),
         'h' => (float) env('LABEL_H', 25),
+        'cols' => (int) env('LABEL_COLS', 2),     // labels side by side on the roll
+        'gap' => (float) env('LABEL_GAP', 3),     // space between two labels side by side, mm
     ],
 
 ];

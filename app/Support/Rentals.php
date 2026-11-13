@@ -131,15 +131,88 @@ class Rentals
         });
     }
 
-    /* Edit: type, payment mode, remark, expected return date and the rent of each line. $d['rents'] is [line id => rent]. */
+    /* Why one line of a challan cannot be taken off it, or null when it can. */
+    public static function lineRemoveBlocker(object $r, object $l): ?string
+    {
+        $bc = Barcodes::text((int) $l->code);
+        if ($l->returned_at !== null || $l->open_replacement_id !== null || $l->close_replacement_id !== null) {
+            return $bc . ' has already come back or was part of a replacement, so it cannot be taken off this challan.';
+        }
+        $d = DB::table('devices')->where('code', $l->code)->first(['status', 'customer_id', 'rent_no']);
+        if (!$d || $d->status !== 'rented' || (int) $d->customer_id !== (int) $r->customer_id || $d->rent_no !== $r->no) {
+            return $bc . ' is no longer on rent with this customer on this challan.';
+        }
+        $billed = DB::table('rentals')->where('kind', 'invoice')->where('customer_id', $r->customer_id)->whereDate('period_to', '>=', substr((string) $l->from_at, 0, 10))->orderBy('id')->value('no');
+        if ($billed) {
+            return $bc . ' cannot be taken off. Rental invoice ' . $billed . ' already bills this customer for a period after it went out. Delete that invoice first.';
+        }
+        return null;
+    }
+
+    /*
+     * Edit: type, payment mode, remark, expected return date and the rent of each line. $d['rents'] is [line id => rent].
+     * Optional: $d['remove'] = [line id, ...] takes pieces off the challan (they go back into stock),
+     *           $d['add'] = [['code' => int, 'rent' => float], ...] puts pieces from stock on the challan (they go out now, on the challan's customer).
+     */
     public static function updateChallan(int $id, array $d, ?int $userId): void
     {
-        DB::transaction(function () use ($id, $d) {
+        DB::transaction(function () use ($id, $d, $userId) {
             $r = DB::table('rentals')->where('id', $id)->where('kind', 'challan')->lockForUpdate()->first();
             if (!$r) {
                 throw new RuntimeException('That challan was not found.');
             }
             $changes = [];
+            $now = now();
+            $customer = (string) DB::table('customers')->where('id', $r->customer_id)->value('name');
+
+            // Take pieces off the challan.
+            $remove = array_values(array_unique(array_map('intval', $d['remove'] ?? [])));
+            if ($remove) {
+                $lines = DB::table('rental_lines')->where('rental_id', $id)->whereIn('id', $remove)->lockForUpdate()->get();
+                DB::table('devices')->whereIn('code', $lines->pluck('code')->all())->lockForUpdate()->pluck('code');
+                foreach ($lines as $l) {
+                    if ($m = self::lineRemoveBlocker($r, $l)) {
+                        throw new RuntimeException($m);
+                    }
+                }
+                foreach ($lines as $l) {
+                    DB::table('rental_lines')->where('id', $l->id)->delete();
+                    DB::table('devices')->where('code', $l->code)->update(['status' => 'in_stock', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
+                    self::addHistory([['code' => $l->code, 'at' => $now, 'text' => 'Taken off challan ' . $r->no . ' (edited), back in stock', 'user_id' => $userId]]);
+                    unset($d['rents'][$l->id]);
+                    $changes[] = 'removed ' . Barcodes::text((int) $l->code);
+                }
+            }
+
+            // Put pieces from stock on the challan.
+            $add = $d['add'] ?? [];
+            if ($add) {
+                $codes = array_column($add, 'code');
+                if (count($codes) !== count(array_unique($codes))) {
+                    throw new RuntimeException('The same barcode is added twice.');
+                }
+                $devs = DB::table('devices')->whereIn('code', $codes)->lockForUpdate()->get(['code', 'item_id', 'status'])->keyBy('code');
+                $items = DB::table('items')->whereIn('id', $devs->pluck('item_id')->unique()->all())->get(['id', 'gst_percent'])->keyBy('id');
+                foreach ($add as $a) {
+                    $dv = $devs[$a['code']] ?? null;
+                    if (!$dv) {
+                        throw new RuntimeException('Barcode ' . Barcodes::text($a['code']) . ' is not in the system.');
+                    }
+                    if ($dv->status !== 'in_stock') {
+                        throw new RuntimeException(Barcodes::text($a['code']) . ' is ' . strtolower(Stock::STATUS[$dv->status][0] ?? $dv->status) . ', not in stock.');
+                    }
+                    DB::table('rental_lines')->insert([
+                        'rental_id' => $id, 'code' => $a['code'], 'item_id' => $dv->item_id, 'rent' => $a['rent'],
+                        'gst_percent' => $items[$dv->item_id]->gst_percent, 'hsn' => config('rentstock.rent_sac', '997315'), 'from_at' => $now,
+                    ]);
+                    DB::table('devices')->where('code', $a['code'])->update(['status' => 'rented', 'customer_id' => $r->customer_id, 'rented_at' => $now, 'return_by' => $d['return_by'] ?: null, 'rent_no' => $r->no]);
+                    self::addHistory([['code' => $a['code'], 'at' => $now, 'text' => 'Rented to ' . $customer . ' · challan ' . $r->no . ' (added when the challan was edited)', 'user_id' => $userId]]);
+                    $changes[] = 'added ' . Barcodes::text((int) $a['code']);
+                }
+            }
+            if (!DB::table('rental_lines')->where('rental_id', $id)->exists()) {
+                throw new RuntimeException('A challan needs at least one item. To cancel the whole challan, delete it instead.');
+            }
             foreach (DB::table('rental_lines')->where('rental_id', $id)->get(['id', 'rent']) as $l) {
                 if (array_key_exists($l->id, $d['rents']) && abs($d['rents'][$l->id] - (float) $l->rent) > 0.0001) {
                     DB::table('rental_lines')->where('id', $l->id)->update(['rent' => $d['rents'][$l->id]]);

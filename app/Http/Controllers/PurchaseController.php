@@ -9,6 +9,40 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
+    private const INVOICE_MSG = 'The supplier invoice must be a PDF, JPG or PNG file of 5 MB or less.';
+
+    /* The uploaded supplier invoice, checked. Returns null when none was chosen, or false when it is not acceptable. */
+    private function invoiceUpload(Request $request)
+    {
+        if (!$request->hasFile('invoice_file')) {
+            return null;
+        }
+        $f = $request->file('invoice_file');
+        if (!$f->isValid() || $f->getSize() > 5 * 1024 * 1024 || !in_array(strtolower((string) $f->getClientOriginalExtension()), ['pdf', 'jpg', 'jpeg', 'png'], true)
+            || !in_array((string) $f->getMimeType(), ['application/pdf', 'image/jpeg', 'image/png'], true)) {
+            return false;
+        }
+        return $f;
+    }
+
+    private function saveInvoice(int $id, $file): void
+    {
+        $old = DB::table('purchases')->where('id', $id)->value('invoice_file');
+        $path = $file->store('purchase-invoices');
+        DB::table('purchases')->where('id', $id)->update(['invoice_file' => $path, 'invoice_file_name' => mb_substr($file->getClientOriginalName(), 0, 150)]);
+        if ($old) {
+            \Illuminate\Support\Facades\Storage::delete($old);
+        }
+    }
+
+    /* Opens the attached supplier invoice (PDF or image) in the browser. */
+    public function invoice(int $id)
+    {
+        $p = DB::table('purchases')->where('id', $id)->first(['invoice_file', 'invoice_file_name']);
+        abort_unless($p && $p->invoice_file && \Illuminate\Support\Facades\Storage::exists($p->invoice_file), 404);
+        return \Illuminate\Support\Facades\Storage::response($p->invoice_file, $p->invoice_file_name ?: basename($p->invoice_file));
+    }
+
     public function index(Request $request)
     {
         $n = \App\Support\Pager::size($request->query('n'));
@@ -57,6 +91,10 @@ class PurchaseController extends Controller
             return $fail('The invoice date is not valid.');
         }
 
+        $file = $this->invoiceUpload($request);
+        if ($file === false) {
+            return $fail(self::INVOICE_MSG);
+        }
         $lines = [];
         foreach ((array) $request->input('lines', []) as $l) {
             $itemId = (int) ($l['item_id'] ?? 0);
@@ -105,6 +143,9 @@ class PurchaseController extends Controller
             'type' => $type, 'pay_mode' => $pay, 'store_id' => $storeId, 'lines' => $lines,
         ], $request->user()->id);
 
+        if ($file) {
+            $this->saveInvoice($id, $file);
+        }
         return redirect()->route('purchase.show', $id)->with('ok', 'Purchase saved. ' . $added . ' barcoded items added to stock.');
     }
 
@@ -195,6 +236,10 @@ class PurchaseController extends Controller
         if ($date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return $fail('The invoice date is not valid.');
         }
+        $file = $this->invoiceUpload($request);
+        if ($file === false) {
+            return $fail(self::INVOICE_MSG);
+        }
         $lines = [];
         foreach ((array) $request->input('lines', []) as $lid => $l) {
             $rate = (string) ($l['rate'] ?? '');
@@ -213,13 +258,26 @@ class PurchaseController extends Controller
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());
         }
+        if ($file) {
+            $this->saveInvoice($id, $file);
+        } elseif ($request->boolean('remove_invoice')) {
+            $old = DB::table('purchases')->where('id', $id)->value('invoice_file');
+            DB::table('purchases')->where('id', $id)->update(['invoice_file' => null, 'invoice_file_name' => null]);
+            if ($old) {
+                \Illuminate\Support\Facades\Storage::delete($old);
+            }
+        }
         return redirect()->route('purchase.show', $id)->with('ok', 'Purchase updated');
     }
 
     public function destroy(Request $request, int $id)
     {
+        $oldFile = DB::table('purchases')->where('id', $id)->value('invoice_file');
         try {
             Purchases::delete($id, $request->user()->id);
+            if ($oldFile) {
+                \Illuminate\Support\Facades\Storage::delete($oldFile);
+            }
         } catch (RuntimeException $e) {
             return redirect()->route('purchase.show', $id)->with('bad', $e->getMessage());
         }

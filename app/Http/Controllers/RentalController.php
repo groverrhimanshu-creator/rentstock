@@ -206,7 +206,14 @@ class RentalController extends Controller
             return redirect()->route('rental.show', $id)->with('bad', $m);
         }
         $lines = DB::table('rental_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.rental_id', $id)->orderBy('l.line_kind')->orderBy('l.id')->get(['l.*', 'i.name']);
+        $why = [];
+        if ($r->kind === 'challan') {
+            foreach ($lines as $l) {
+                $why[$l->id] = Rentals::lineRemoveBlocker($r, $l);
+            }
+        }
         return view($r->kind === 'invoice' ? 'rental.edit-invoice' : 'rental.edit-challan', [
+            'why' => $why, 'stockUrl' => route('sale.stock'), 'prefix' => \App\Support\Barcodes::prefix(),
             'r' => $r, 'lines' => $lines, 'customer' => (string) DB::table('customers')->where('id', $r->customer_id)->value('name'),
         ]);
     }
@@ -244,7 +251,20 @@ class RentalController extends Controller
                     }
                     $rents[(int) $lid] = round((float) $rent, 2);
                 }
-                Rentals::updateChallan($id, $common + ['return_by' => $returnBy, 'rents' => $rents], $request->user()->id);
+                $add = [];
+                foreach ((array) $request->input('add', []) as $a) {
+                    $code = (int) ($a['code'] ?? 0);
+                    $rent = (string) ($a['rent'] ?? '');
+                    if (!$code) {
+                        continue;
+                    }
+                    if ($rent === '' || !is_numeric($rent) || (float) $rent < 0) {
+                        return $fail('Every added item needs a rent per month (zero or more).');
+                    }
+                    $add[] = ['code' => $code, 'rent' => round((float) $rent, 2)];
+                }
+                $remove = array_map('intval', (array) $request->input('remove', []));
+                Rentals::updateChallan($id, $common + ['return_by' => $returnBy, 'rents' => $rents, 'remove' => $remove, 'add' => $add], $request->user()->id);
                 $msg = 'Challan updated';
             }
         } catch (RuntimeException $e) {

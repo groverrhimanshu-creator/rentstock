@@ -3,7 +3,7 @@
 @section('content')
 <div class="pg"><h2>New purchase<small>Choose for each row whether the item gets a barcode</small></h2><a class="ab" href="{{ route('purchase.index') }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
-<form id="pf" method="post" action="{{ route('purchase.store') }}" autocomplete="off">
+<form id="pf" method="post" action="{{ route('purchase.store') }}" autocomplete="off" enctype="multipart/form-data">
     @csrf
     <div class="cd"><h3>Purchase details</h3>
         <div class="fg">
@@ -12,6 +12,7 @@
             <label class="f"><span>Invoice date</span><input type="date" name="inv_date" value="{{ old('inv_date') }}"></label>
             <label class="f"><span>Type</span><select name="type" id="type">@foreach (['GST', 'Bill of supply'] as $o)<option @selected(old('type', 'GST') === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Payment mode</span><select name="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', 'Cash') === $o)>{{ $o }}</option>@endforeach</select></label>
+            <label class="f"><span>Supplier invoice (PDF, JPG or PNG, up to 5 MB)</span><input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"></label>
             <label class="f"><span>Store</span><select name="store_id">@foreach ($stores as $s)<option value="{{ $s->id }}" @selected((string) old('store_id') === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>
         </div>
     </div>

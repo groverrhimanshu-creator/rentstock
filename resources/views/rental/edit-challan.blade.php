@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Edit challan')
 @section('content')
-<div class="pg"><h2>Edit challan {{ $r->no }}<small>Items cannot be changed after saving</small></h2><a class="ab" href="{{ route('rental.show', $r->id) }}">Back</a></div>
+<div class="pg"><h2>Edit challan {{ $r->no }}<small>Change the details and the items</small></h2><a class="ab" href="{{ route('rental.show', $r->id) }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 <form method="post" action="{{ route('rental.update', $r->id) }}" autocomplete="off">
     @csrf @method('PUT')
@@ -18,17 +18,24 @@
     </div>
     <div class="cd"><h3>Items</h3>
         <div class="tw"><table class="t">
-            <thead><tr><th>Barcode</th><th>Item</th><th>Rent / month</th></tr></thead>
+            <thead><tr><th>Barcode</th><th>Item</th><th>Rent / month</th><th>Take off</th></tr></thead>
             <tbody>
                 @foreach ($lines as $l)
-                    <tr><td class="bc">{{ \App\Support\Barcodes::text($l->code) }}</td><td>{{ $l->name }}</td><td><input class="cell" type="number" min="0" step="0.01" name="rents[{{ $l->id }}]" value="{{ old('rents.' . $l->id, $l->rent) }}"></td></tr>
+                    <tr><td class="bc">{{ \App\Support\Barcodes::text($l->code) }}</td><td>{{ $l->name }}</td><td><input class="cell" type="number" min="0" step="0.01" name="rents[{{ $l->id }}]" value="{{ old('rents.' . $l->id, $l->rent) }}"></td>
+                        <td>@if ($why[$l->id] ?? null)<small class="hint" title="{{ $why[$l->id] }}">Cannot: {{ \Illuminate\Support\Str::limit($why[$l->id], 70) }}</small>@else<label><input type="checkbox" name="remove[]" value="{{ $l->id }}" @checked(in_array((string) $l->id, array_map('strval', (array) old('remove', [])), true))> Remove</label>@endif</td></tr>
                 @endforeach
             </tbody>
         </table></div>
-        <div class="msg info">A new rent applies to rental invoices made after this. Invoices already made are not changed. To change the items, delete this challan (its items go back into stock) and make a new one.</div>
+        <div class="f sugwrap" style="margin-top:14px"><span>Add items from stock (scan or type a barcode, or a name such as HP screen)</span>
+            <input id="addq" placeholder="{{ $prefix }}6000… or a name" autocomplete="off"><div id="sug"></div></div>
+        <div class="tw" id="addbox" hidden style="margin-top:8px"><table class="t"><thead><tr><th>Barcode</th><th>Item</th><th>Rent / month</th><th></th></tr></thead><tbody id="addbody"></tbody></table></div>
+        <div class="msg bad" id="clienterr" hidden></div>
+        <div class="msg info">Ticked items go back into stock. Added items go out on this challan today. A new rent applies to rental invoices made after this. Invoices already made are not changed. An item that has come back, was replaced, or is already billed on a rental invoice cannot be taken off.</div>
         <div class="rowx"><button class="ab solid">Save</button><a class="ab" href="{{ route('rental.show', $r->id) }}">Cancel</a></div>
     </div>
 </form>
+<script>window.CHE = {!! json_encode(['stockUrl' => $stockUrl, 'prefix' => $prefix], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
+<script src="{{ \App\Support\Assets::url('assets/challanedit.js') }}"></script>
 <script>
 (function () {
     var d = document.getElementById('duration'), b = document.getElementById('retbox'), i = document.getElementById('retdate');

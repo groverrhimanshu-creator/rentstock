@@ -78,6 +78,23 @@ class BarcodeController extends Controller
         return $this->showLabels($codes, false, '', false);
     }
 
+    /* Labels for the barcodes a purchase made: all of them, or only one line of it (?line=). */
+    public function purchase(Request $request, int $id)
+    {
+        $q = DB::table('devices')->where('purchase_id', $id);
+        if ($request->filled('line')) {
+            $q->where('purchase_line_id', (int) $request->query('line'));
+        }
+        $codes = $q->orderBy('code')->limit(1001)->pluck('code')->map(fn ($c) => (int) $c)->all();
+        if (!$codes) {
+            return redirect()->route('purchase.show', $id)->with('bad', 'This purchase has no barcoded items to print.');
+        }
+        if (count($codes) > 1000) {
+            return redirect()->route('purchase.show', $id)->with('bad', 'Print at most 1000 labels at a time. Print line by line instead.');
+        }
+        return $this->showLabels($codes, false, route('purchase.show', $id), false);
+    }
+
     /*
      * One label, opened after a config is changed (item edit or upgrade) so the new sticker can be printed.
      * The label also shows the config. "back" is a page of this site to return to; anything else is ignored.
@@ -103,6 +120,8 @@ class BarcodeController extends Controller
         }
         $w = max(30.0, (float) config('rentstock.label.w', 50));
         $h = max(18.0, (float) config('rentstock.label.h', 25));
-        return view('barcodes.labels', ['w' => $w, 'h' => $h, 's' => round(min($w / 50, $h / 25), 2), 'title' => trim((string) config('rentstock.label.title', '')), 'labels' => $labels, 'prefix' => Barcodes::prefix(), 'withConfig' => $withConfig, 'back' => $back, 'saved' => $saved]);
+        $cols = min(4, max(1, (int) config('rentstock.label.cols', 2)));
+        $gap = max(0.0, (float) config('rentstock.label.gap', 3));
+        return view('barcodes.labels', ['w' => $w, 'h' => $h, 'cols' => $cols, 'gap' => $gap, 'title' => trim((string) config('rentstock.label.title', '')), 'labels' => $labels, 'prefix' => Barcodes::prefix(), 'withConfig' => $withConfig, 'back' => $back, 'saved' => $saved]);
     }
 }

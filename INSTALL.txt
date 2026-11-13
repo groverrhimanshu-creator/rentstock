@@ -291,3 +291,15 @@ STEP 29b - cache fix
 STEP 30 - Deleted document numbers are used again
 - Sale / rental invoice (one series), rental challan, return and credit note: a new document takes the LOWEST number not in use. Delete INV 12 and the next invoice is 12 again (also for a number deleted from the middle). Each financial year still starts at 001; challans start at Ch 2143.
 - Code: App\Support\Numbers (the counter row is locked inside the save, so two users never get the same number). No migration.
+
+STEP 31 - Supplier invoice upload, print purchase barcodes, edit challan items
+- Purchase: "Supplier invoice" file (PDF/JPG/PNG, max 5 MB) on New and Edit purchase; "Supplier invoice" button on the purchase page; file kept in storage/app/private/purchase-invoices (deleted with the purchase). Remove/replace on Edit.
+- Purchase page: "Print barcodes" (all, max 1000) and a "Print" button on every line -> label page.
+- Edit rental challan: tick "Remove" to take an item off (back in stock; blocked when returned, replaced or billed on a rental invoice) and add items from stock with the search box (goes out now). At least one item must remain.
+- MIGRATION: php artisan migrate  (purchases.invoice_file, invoice_file_name)
+Then: php artisan view:clear. Make sure storage/ is writable by the web user on the server (chown -R www-data:www-data storage bootstrap/cache).
+
+STEP 32 - Stickers: labels across the roll
+- The label page now prints LABELS ACROSS (default 2, as on the client's roll), each with its own width/height and a gap between, one row per printed page. Page size = across x width + gaps, by height (default 103 x 25 mm).
+- On the label page set: Labels across, Label width, Label height, Gap, Move right/down. Saved in that browser. In the print window pick the label printer, paper size = the size shown on the page, margins None, scale 100%.
+- Defaults can be set in .env: LABEL_COLS=2 LABEL_W=50 LABEL_H=25 LABEL_GAP=3 (then php artisan config:clear).
