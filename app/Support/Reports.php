@@ -135,6 +135,7 @@ class Reports
         [$from, $to] = self::purchaseRange($f);
         $rows = self::purchaseQuery($f)->orderByRaw('coalesce(p.inv_date, date(p.created_at)) desc')->orderByDesc('p.id')
             ->selectRaw("p.id, p.inv_no, coalesce(p.inv_date, date(p.created_at)) as idate, p.created_at, p.type, p.pay_mode, s.name as supplier, st.name as store,
+                (select group_concat(concat(i2.name, ' x', l2.qty) order by l2.id separator ', ') from purchase_lines l2 join items i2 on i2.id = l2.item_id where l2.purchase_id = p.id) as products,
                 (select count(*) from purchase_lines l where l.purchase_id = p.id) as nlines,
                 (select coalesce(sum(l.qty), 0) from purchase_lines l where l.purchase_id = p.id) as qty,
                 (select coalesce(sum(l.qty * l.rate), 0) from purchase_lines l where l.purchase_id = p.id) as taxable,
@@ -146,10 +147,10 @@ class Reports
             $gst = $r->type === 'GST' ? Tax::r2((float) $r->gst) : 0.0;   // "Bill of supply" has no GST
             $tot['taxable'] += $taxable;
             $tot['gst'] += $gst;
-            $out[] = [$r->idate, $r->inv_no, $r->supplier, $r->type, $r->pay_mode, (string) $r->store, (int) $r->nlines, (int) $r->qty, $taxable, $gst, Tax::r2($taxable + $gst), substr((string) $r->created_at, 0, 10)];
+            $out[] = [$r->idate, $r->inv_no, $r->supplier, $r->type, $r->pay_mode, (string) $r->store, (string) $r->products, (int) $r->nlines, (int) $r->qty, $taxable, $gst, Tax::r2($taxable + $gst), substr((string) $r->created_at, 0, 10)];
         }
         return ['name' => 'purchase-report',
-            'cols' => [['Invoice date', 'd'], ['Invoice no', ''], ['Supplier', ''], ['Type', ''], ['Payment', ''], ['Store', ''], ['Items', 'c'], ['Qty', 'n'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm'], ['Entered on', 'd']],
+            'cols' => [['Invoice date', 'd'], ['Invoice no', ''], ['Supplier', ''], ['Type', ''], ['Payment', ''], ['Store', ''], ['Products', ''], ['Items', 'c'], ['Qty', 'n'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm'], ['Entered on', 'd']],
             'rows' => $out, 'meta' => $rows->pluck('id')->all(),
             'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name']),
             'filters' => ['from' => $from, 'to' => $to, 'supplier' => !empty($f['supplier']) ? (int) $f['supplier'] : ''],
@@ -165,8 +166,9 @@ class Reports
         }
         $lines = DB::table('purchase_lines as l')->join('purchases as p', 'p.id', '=', 'l.purchase_id')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
             ->join('items as i', 'i.id', '=', 'l.item_id')->whereIn('l.purchase_id', $ids)->orderBy('p.id')->orderBy('l.id')
-            ->get(['l.id', 'l.purchase_id', 'l.config', 'l.qty', 'l.rate', 'l.barcoded', 'i.name as item', 'i.gst_percent', 'p.inv_no', 'p.inv_date', 'p.created_at', 'p.type', 's.name as supplier']);
+            ->get(['l.id', 'l.purchase_id', 'l.config', 'l.qty', 'l.rate', 'l.barcoded', 'l.hsn', 'l.brand_tags', 'i.name as item', 'i.hsn as item_hsn', 'i.gst_percent', 'p.inv_no', 'p.inv_date', 'p.created_at', 'p.type', 's.name as supplier']);
         $codes = DB::table('devices')->whereIn('purchase_id', $ids)->selectRaw('purchase_line_id, count(*) as n, min(code) as lo, max(code) as hi')->groupBy('purchase_line_id')->get()->keyBy('purchase_line_id');
+        $tagRows = DB::table('devices')->whereIn('purchase_id', $ids)->orderBy('code')->get(['purchase_line_id', 'brand_tag'])->groupBy('purchase_line_id');
         $out = [];
         foreach ($lines as $l) {
             $c = $codes[$l->id] ?? null;
@@ -176,7 +178,8 @@ class Reports
                 'date' => Docs::d($l->inv_date ?: substr((string) $l->created_at, 0, 10)), 'inv_no' => $l->inv_no, 'supplier' => $l->supplier,
                 'item' => $l->item, 'config' => (string) $l->config, 'qty' => (int) $l->qty, 'rate' => number_format((float) $l->rate, 2, '.', ''),
                 'amount' => number_format($amount, 2, '.', ''), 'gst' => $l->type === 'GST' ? number_format(Tax::r2($amount * (float) $l->gst_percent / 100), 2, '.', '') : '0.00',
-                'kind' => $l->barcoded ? 'Barcoded' : 'By quantity',
+                'kind' => $l->barcoded ? 'Barcoded' : 'By quantity', 'hsn' => (string) ($l->hsn ?: $l->item_hsn),
+                'tags' => isset($tagRows[$l->id]) ? $tagRows[$l->id]->pluck('brand_tag')->filter()->implode(', ') : (string) ($l->brand_tags ?? ''),
                 'barcodes' => $c ? ($c->n > 1 ? Barcodes::text((int) $c->lo) . ' to ' . Barcodes::text((int) $c->hi) . ' (' . $c->n . ')' : Barcodes::text((int) $c->lo)) : '',
             ];
         }

@@ -18,9 +18,9 @@
         purchase: {
             title: function (d) { return 'Purchase ' + (d.inv_no || '(no invoice no)') + ' · ' + d.supplier + ' · ' + d.date + ' (' + d.items.length + ' lines)'; },
             html: function (d) {
-                return wrap('<th>#</th><th>Item</th><th>Config</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th class="num">GST</th><th>Kind</th><th>Barcodes made</th>',
+                return wrap('<th>#</th><th>Item</th><th>Config</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th class="num">GST</th><th>Kind</th><th>Barcodes made</th><th>Brand tags</th>',
                     d.items.map(function (i, n) {
-                        return '<tr><td>' + (n + 1) + '</td><td><b>' + esc(i.item) + '</b></td><td>' + esc(i.config) + '</td><td class="num">' + esc(i.qty) + '</td><td class="num">' + esc(i.rate) + '</td><td class="num">' + esc(i.amount) + '</td><td class="num">' + esc(i.gst) + '</td><td>' + esc(i.kind) + '</td><td class="bc">' + esc(i.barcodes) + '</td></tr>';
+                        return '<tr><td>' + (n + 1) + '</td><td><b>' + esc(i.item) + '</b></td><td>' + esc(i.config) + '</td><td>' + esc(i.hsn) + '</td><td class="num">' + esc(i.qty) + '</td><td class="num">' + esc(i.rate) + '</td><td class="num">' + esc(i.amount) + '</td><td class="num">' + esc(i.gst) + '</td><td>' + esc(i.kind) + '</td><td class="bc">' + esc(i.barcodes) + '</td><td>' + esc(i.tags) + '</td></tr>';
                     }), 'This purchase has no lines.');
             }
         }

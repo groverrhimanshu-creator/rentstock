@@ -56,6 +56,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::get('/purchase', [PurchaseController::class, 'index'])->name('purchase.index');
         Route::get('/purchase/new', [PurchaseController::class, 'create'])->name('purchase.create');
         Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
+        Route::post('/purchase/import-rows', [PurchaseController::class, 'importRows'])->name('purchase.import');
         Route::post('/purchase/quick-item', [PurchaseController::class, 'quickItem'])->name('purchase.quick-item');
         Route::get('/purchase/{id}', [PurchaseController::class, 'show'])->whereNumber('id')->name('purchase.show');
         Route::get('/dc/{kind}/{id}', [\App\Http\Controllers\DcCopyController::class, 'show'])->whereNumber('id')->name('dc.show');
@@ -124,6 +125,10 @@ Route::middleware(['auth', 'role'])->group(function () {
 
     // Masters, customer logins and the company profile are for the Admin only.
     Route::middleware('role:admin')->group(function () {
+        Route::get('/brands/import', [\App\Http\Controllers\BrandImportController::class, 'show'])->name('brands.import');
+        Route::get('/brands/import/sample', [\App\Http\Controllers\BrandImportController::class, 'sample'])->name('brands.import.sample');
+        Route::post('/brands/import/read', [\App\Http\Controllers\BrandImportController::class, 'read'])->name('brands.import.read');
+        Route::post('/brands/import/commit', [\App\Http\Controllers\BrandImportController::class, 'commit'])->name('brands.import.commit');
         Route::get('/items/import', [ItemImportController::class, 'show'])->name('items.import');
         Route::get('/items/import/sample', [ItemImportController::class, 'sample'])->name('items.import.sample');
         Route::post('/items/import/read', [ItemImportController::class, 'read'])->name('items.import.read');

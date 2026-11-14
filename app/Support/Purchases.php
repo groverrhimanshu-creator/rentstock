@@ -37,6 +37,7 @@ class Purchases
                 $lid = DB::table('purchase_lines')->insertGetId([
                     'purchase_id' => $pid, 'item_id' => $item->id, 'config' => $config, 'qty' => $l['qty'], 'rate' => $l['rate'], 'barcoded' => $want,
                     'hsn' => ($l['hsn'] ?? '') !== '' ? $l['hsn'] : $item->hsn,
+                    'brand_tags' => !$want && !empty($l['tags']) ? mb_substr(implode(', ', $l['tags']), 0, 2000) : null,
                 ]);
                 if ($want) {
                     $first = Barcodes::reserve($l['qty']);

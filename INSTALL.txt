@@ -310,3 +310,13 @@ STEP 33 - Purchase edit, DC copy, sticker test print
 - Label page: "Test print (outlines)" prints one row of boxes with a cross, to tune Labels across / width / height / gap / Move right-down to the real roll.
 - MIGRATION: php artisan migrate  (purchase_lines.hsn, dc_file and dc_file_name on sales, rentals, returns, replacements)
 Then: php artisan view:clear (storage must be writable by the web user).
+
+STEP 34 - Purchase report details, brand tag box, bulk import
+- Purchase report: new "Products" column (item x qty of every line); the item pop-up and "Download item details" now also have HSN and Brand tags.
+- New purchase: the Brand tag box is a larger text box that can always be typed in (type or paste, separated by commas or new lines). "No barcode" rows keep the tags as a note on the line.
+- "Import tags from file" on a row, and "Import items from file (CSV / Excel)" above the totals: columns Model/Product, Brand Tag, Config, HSN, Rate (Quantity for by-quantity items). One file row = one piece; same item+config+HSN+rate become one row; items not in the Item master are listed and skipped.
+- Purchase page shows the brand tags of every line.
+- MIGRATION: php artisan migrate  (purchase_lines.brand_tags)
+
+STEP 35 - Import brands
+- Masters > Brand > "Import brands": choose a CSV or Excel file with Brand Name (and optionally Popular Name, Description), check the result, then import. Existing brands (case and spaces ignored) and repeats in the file are skipped; rows that are empty or too long are listed to fix. "Download sample file" included. Admin only. No migration.

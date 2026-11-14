@@ -21,7 +21,9 @@
             <thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Brand tag</th><th>Barcode?</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th>Barcodes</th><th></th></tr></thead>
             <tbody id="rows"></tbody>
         </table></div>
-        <div class="rowx" style="margin-top:10px"><button type="button" class="ab sm" id="addline">+ Add another item</button><button type="button" class="ab sm" id="newitem">+ New item (not in the list)</button></div>
+        <div class="rowx" style="margin-top:10px"><button type="button" class="ab sm" id="addline">+ Add another item</button><button type="button" class="ab sm" id="newitem">+ New item (not in the list)</button><button type="button" class="ab sm orange" id="bulkrows">Import items from file (CSV / Excel)</button></div>
+        <input type="file" id="pickfile" accept=".csv,.txt,.xlsx" hidden>
+        <p class="hint">Bulk import: a file with the columns <b>Model/Product, Brand Tag, Config, HSN, Rate</b> (one row per piece; Config, HSN and Rate are optional). Pieces with the same item, config, HSN and rate become one row here. Check the rows, then save the purchase.</p>
         <div class="cd" id="qi" hidden style="margin:12px 0 0;background:var(--a-bg,#f7f9fc)">
             <h3>New item</h3>
             <div class="msg bad" id="qi-err" hidden></div>
@@ -46,7 +48,7 @@
 </form>
 @php
     $pdata = [
-        'companyState' => $companyState, 'prefix' => \App\Support\Barcodes::prefix(), 'nextCode' => \App\Support\Barcodes::peek(), 'quickUrl' => route('purchase.quick-item'),
+        'companyState' => $companyState, 'prefix' => \App\Support\Barcodes::prefix(), 'nextCode' => \App\Support\Barcodes::peek(), 'quickUrl' => route('purchase.quick-item'), 'importUrl' => route('purchase.import'),
         'items' => $items->map(function ($i) {
             return ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'gst' => (float) $i->gst_percent, 'hsn' => (string) $i->hsn];
         })->values()->all(),

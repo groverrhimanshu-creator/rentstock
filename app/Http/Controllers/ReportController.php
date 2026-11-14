@@ -75,9 +75,9 @@ class ReportController extends Controller
         return response()->streamDownload(function () use ($lines) {
             $h = fopen('php://output', 'w');
             fwrite($h, "\xEF\xBB\xBF");
-            fputcsv($h, ['Invoice date', 'Invoice no', 'Supplier', 'Item', 'Config', 'Qty', 'Rate', 'Amount', 'GST', 'Kind', 'Barcodes made'], ',', '"', '');
+            fputcsv($h, ['Invoice date', 'Invoice no', 'Supplier', 'Item', 'Config', 'HSN', 'Qty', 'Rate', 'Amount', 'GST', 'Kind', 'Barcodes made', 'Brand tags'], ',', '"', '');
             foreach ($lines as $l) {
-                fputcsv($h, [$l['date'], $l['inv_no'], $l['supplier'], $l['item'], $l['config'], $l['qty'], $l['rate'], $l['amount'], $l['gst'], $l['kind'], $l['barcodes']], ',', '"', '');
+                fputcsv($h, [$l['date'], $l['inv_no'], $l['supplier'], $l['item'], $l['config'], $l['hsn'], $l['qty'], $l['rate'], $l['amount'], $l['gst'], $l['kind'], $l['barcodes'], $l['tags']], ',', '"', '');
             }
             fclose($h);
         }, 'purchase-report-lines-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);

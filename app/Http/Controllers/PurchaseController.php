@@ -35,6 +35,101 @@ class PurchaseController extends Controller
         }
     }
 
+    /*
+     * Reads a CSV or Excel (.xlsx) file of pieces and returns purchase rows. Every file row is one piece:
+     * Model/Product (an item of the Item master), Brand Tag, Config, HSN, Rate. Pieces with the same item, config, HSN and rate become one row.
+     * By-quantity items add up a "Quantity" column (1 when empty).
+     */
+    public function importRows(Request $request)
+    {
+        $bad = fn (string $m) => response()->json(['ok' => false, 'error' => $m], 422);
+        if (!$request->hasFile('file') || !$request->file('file')->isValid()) {
+            return $bad('Choose a CSV or Excel (.xlsx) file.');
+        }
+        $file = $request->file('file');
+        if ($file->getSize() > \App\Support\ImportCheck::MAX_BYTES) {
+            return $bad('The file is too big (10 MB at most).');
+        }
+        $ext = strtolower($file->getClientOriginalExtension());
+        try {
+            if ($ext === 'xlsx') {
+                $table = \App\Support\ImportCheck::tableFromXlsx($file->getRealPath());
+            } elseif (in_array($ext, ['csv', 'txt'], true)) {
+                $table = \App\Support\ImportCheck::tableFromText((string) file_get_contents($file->getRealPath()));
+            } else {
+                return $bad($ext === 'xls' ? 'Old .xls files cannot be read. Save the sheet as .xlsx or CSV.' : 'Choose a CSV or Excel (.xlsx) file.');
+            }
+        } catch (RuntimeException $e) {
+            return $bad($e->getMessage());
+        }
+        if (count($table) < 2) {
+            return $bad('The file has no data rows.');
+        }
+        $alias = ['item' => ['modelproduct', 'model', 'product', 'productname', 'itemname', 'item', 'name'], 'tag' => ['brandtag', 'tag', 'srno', 'serialno', 'serial'],
+            'config' => ['config', 'configuration'], 'hsn' => ['hsncode', 'hsn'], 'rate' => ['rate', 'price', 'purchaseprice', 'purchaserate'], 'qty' => ['quantity', 'qty']];
+        $idx = [];
+        foreach ($table[0] as $i => $h) {
+            $n = preg_replace('/[^a-z0-9]/', '', strtolower((string) $h));
+            foreach ($alias as $k => $list) {
+                if (!isset($idx[$k]) && in_array($n, $list, true)) {
+                    $idx[$k] = $i;
+                }
+            }
+        }
+        if (!isset($idx['item'])) {
+            return $bad('The first row must be the column names. The column "Model/Product" was not found. Columns: Model/Product, Brand Tag, Config, HSN, Rate, Quantity.');
+        }
+        $key = fn (string $s) => mb_strtolower(trim(preg_replace('/\s+/u', ' ', $s)));
+        $items = [];
+        foreach (DB::table('items')->get(['id', 'name', 'tracked', 'hsn']) as $it) {
+            $items[$key($it->name)] = $it;
+        }
+        $groups = [];
+        $unknown = [];
+        $rows = 0;
+        foreach (array_slice($table, 1, 5000) as $r) {
+            $g = fn ($k) => isset($idx[$k]) ? trim((string) ($r[$idx[$k]] ?? '')) : '';
+            $name = $g('item');
+            if ($name === '') {
+                continue;
+            }
+            $it = $items[$key($name)] ?? null;
+            if (!$it) {
+                $unknown[$name] = true;
+                continue;
+            }
+            $rate = str_replace(',', '', $g('rate'));
+            $rate = is_numeric($rate) && (float) $rate >= 0 ? round((float) $rate, 2) : 0;
+            $hsn = preg_replace('/\.0+$/', '', $g('hsn'));
+            $hsn = preg_match('/^[0-9]{1,10}$/', $hsn) ? $hsn : (string) $it->hsn;
+            $cfg = mb_substr($g('config'), 0, 150);
+            $k = $it->id . '|' . $cfg . '|' . $hsn . '|' . $rate;
+            $groups[$k] = $groups[$k] ?? ['item_id' => (int) $it->id, 'config' => $cfg, 'hsn' => $hsn, 'rate' => $rate, 'bc' => $it->tracked ? 'yes' : 'no', 'qty' => 0, 'tags' => []];
+            $q = ctype_digit($g('qty')) && (int) $g('qty') > 0 ? (int) $g('qty') : 1;
+            if ($it->tracked) {
+                $groups[$k]['qty']++;                                   // one file row = one piece
+                $groups[$k]['tags'][] = mb_substr($g('tag'), 0, 60);
+            } else {
+                $groups[$k]['qty'] += $q;
+                if ($g('tag') !== '') {
+                    $groups[$k]['tags'][] = mb_substr($g('tag'), 0, 60);
+                }
+            }
+            $rows++;
+        }
+        $lines = [];
+        $missing = 0;
+        foreach ($groups as $g) {
+            if ($g['bc'] === 'yes') {
+                $missing += count(array_filter($g['tags'], fn ($t) => $t === ''));
+                $g['tags'] = array_values(array_filter($g['tags'], fn ($t) => $t !== ''));
+            }
+            $g['tags'] = implode(', ', $g['tags']);
+            $lines[] = $g;
+        }
+        return response()->json(['ok' => true, 'rows' => $rows, 'lines' => array_slice($lines, 0, 200), 'unknown' => array_slice(array_keys($unknown), 0, 20), 'unknown_count' => count($unknown), 'missing_tags' => $missing]);
+    }
+
     /* Opens the attached supplier invoice (PDF or image) in the browser. */
     public function invoice(int $id)
     {
@@ -129,8 +224,8 @@ class PurchaseController extends Controller
                         return $fail('A brand tag can have 60 characters at most.');
                     }
                 }
-            } else {
-                $tags = [];
+            } elseif ($tags) {
+                $tags = array_map(fn ($t) => mb_substr($t, 0, 60), array_slice($tags, 0, 500));   // kept as a note on the line
             }
             $lines[] = [
                 'hsn' => $hsnIn, 'tags' => $tags, 'item_id' => $itemId, 'config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'qty' => (int) $qty,
@@ -314,7 +409,7 @@ class PurchaseController extends Controller
             ->where('p.id', $id)->select('p.*', 's.name as sname', 's.address', 's.city', 's.state', 's.state_code', 's.gstin', 's.phone', 'st.name as store')->first();
         abort_unless($p, 404);
         $lines = DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn']);
-        $codes = DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id'])->groupBy('purchase_line_id');
+        $codes = DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id', 'brand_tag'])->groupBy('purchase_line_id');
         $barcoded = $lines->sum(fn ($l) => count($codes[$l->id] ?? []));
         $qtyAdded = $lines->filter(fn ($l) => !$l->barcoded)->sum('qty');
         $company = DB::table('company_profile')->where('id', 1)->first();
