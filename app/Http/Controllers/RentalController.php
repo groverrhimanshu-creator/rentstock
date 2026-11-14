@@ -72,6 +72,9 @@ class RentalController extends Controller
     public function store(Request $request)
     {
         $fail = fn (string $m) => back()->withInput()->withErrors(['form' => $m]);
+        if (\App\Support\DcCopy::bad($request)) {
+            return $fail(\App\Support\DcCopy::MSG);
+        }
         $customerId = (int) $request->input('customer_id');
         if (!$customerId || !DB::table('customers')->where('id', $customerId)->exists()) {
             return $fail('Please choose a customer.');
@@ -113,6 +116,7 @@ class RentalController extends Controller
             return $fail($e->getMessage());
         }
         $no = DB::table('rentals')->where('id', $id)->value('no');
+        \App\Support\DcCopy::attach($request, 'rentals', $id);
         return redirect()->route('rental.show', $id)->with('ok', 'Rent saved. Challan ' . $no . ' created.');
     }
 

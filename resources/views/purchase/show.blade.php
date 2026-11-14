@@ -18,10 +18,10 @@
         <div><h5>Payment</h5><p>{{ $p->pay_mode }}</p></div>
     </div>
     <table>
-        <thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>New barcodes</th></tr></thead>
+        <thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>New barcodes</th></tr></thead>
         <tbody>
             @foreach ($lines as $i => $l)
-                <tr><td>{{ $i + 1 }}</td><td><b>{{ $l->name }}</b></td><td class="num">{{ $l->qty }}</td><td class="num">{{ \App\Support\Tax::money($l->rate) }}</td><td class="num">{{ \App\Support\Tax::money($l->qty * $l->rate) }}</td>
+                <tr><td>{{ $i + 1 }}</td><td><b>{{ $l->name }}</b></td><td>{{ $l->hsn ?: $l->item_hsn }}</td><td class="num">{{ $l->qty }}</td><td class="num">{{ \App\Support\Tax::money($l->rate) }}</td><td class="num">{{ \App\Support\Tax::money($l->qty * $l->rate) }}</td>
                     <td><span class="codes">{{ isset($codes[$l->id]) ? $codes[$l->id]->map(fn ($c) => \App\Support\Barcodes::text($c->code))->implode(', ') : 'Quantity item' }}</span>@if (isset($codes[$l->id]) && count($codes[$l->id]) > 0) <a class="ab sm" href="{{ route('barcodes.purchase', ['id' => $p->id, 'line' => $l->id]) }}" target="_blank">Print</a>@endif</td></tr>
             @endforeach
         </tbody>

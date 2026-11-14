@@ -19,19 +19,21 @@
     </div>
     <div class="cd"><h3>Items</h3>
         <div class="tw"><table class="t">
-            <thead><tr><th>Item</th><th>Config</th><th>Barcode?</th><th class="num">Qty</th><th>Rate</th><th>Barcodes</th></tr></thead>
+            <thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Barcode?</th><th class="num">Qty</th><th>New brand tags</th><th>Rate</th><th>Barcodes</th></tr></thead>
             <tbody>
                 @foreach ($lines as $l)
-                    <tr><td>{{ $l->name }}</td>
+                    <tr><td><select name="lines[{{ $l->id }}][item_id]">@foreach ($items as $i)@if (!$l->barcoded || $i->tracked)<option value="{{ $i->id }}" @selected((string) old('lines.' . $l->id . '.item_id', $l->item_id) === (string) $i->id)>{{ $i->name }}</option>@endif @endforeach</select></td>
                         <td><input class="cellw" name="lines[{{ $l->id }}][config]" value="{{ old('lines.' . $l->id . '.config', $l->config) }}" maxlength="150"></td>
+                        <td><input class="cell" name="lines[{{ $l->id }}][hsn]" value="{{ old('lines.' . $l->id . '.hsn', $l->hsn ?: $l->item_hsn) }}" maxlength="10" inputmode="numeric"></td>
                         <td>{{ $l->barcoded ? 'With barcode' : 'No barcode (count only)' }}</td>
-                        <td class="num">{{ $l->qty }}</td>
+                        <td><input class="cell" type="number" min="1" max="5000" step="1" name="lines[{{ $l->id }}][qty]" value="{{ old('lines.' . $l->id . '.qty', $l->qty) }}"></td>
+                        <td>@if ($l->barcoded)<input class="cellw" name="lines[{{ $l->id }}][tags]" value="{{ old('lines.' . $l->id . '.tags') }}" placeholder="Only if you raise the quantity" autocomplete="off">@else - @endif</td>
                         <td><input class="cell" type="number" min="0" step="0.01" name="lines[{{ $l->id }}][rate]" value="{{ old('lines.' . $l->id . '.rate', $l->rate) }}"></td>
                         <td><span class="codes">{{ isset($codes[$l->id]) ? $codes[$l->id]->map(fn ($c) => \App\Support\Barcodes::text($c->code))->implode(', ') : ($l->barcoded ? '' : 'Quantity item') }}</span></td></tr>
                 @endforeach
             </tbody>
         </table></div>
-        <div class="msg info">To change an item or a quantity, delete this purchase and enter it again. A purchase can be deleted only while all its items are still in stock.</div>
+        <div class="msg info">You can change the item, config, HSN code, rate and quantity. A barcoded item or quantity can be changed only while its pieces are still in stock and untouched (not sold, rented, repaired or changed). To raise the quantity of a barcoded item, enter one brand tag for each new piece, separated by commas; lowering it removes the newest untouched pieces.</div>
         <div class="rowx"><button class="ab solid">Save</button><a class="ab" href="{{ route('purchase.show', $p->id) }}">Cancel</a></div>
     </div>
 </form>

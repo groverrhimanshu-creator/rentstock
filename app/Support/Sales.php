@@ -263,6 +263,7 @@ class Sales
                     DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$l->item_id, $l->qty]);
                 }
             }
+            DcCopy::purge('sales', $id);
             DB::table('sales')->where('id', $id)->delete();   // the lines go with it
             Audit::log('delete', 'sale invoice', $s->no, 'Customer ' . $s->name . ' · total ' . $s->total . ' · ' . count($codes) . ' pieces back in stock');
         });

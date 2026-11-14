@@ -12,6 +12,7 @@
     @endif
     <a class="ab" href="{{ $mine ? route('myinv') : route('sale.index') }}">Back</a></div></div>
 <div class="msg ok">Stock reduced for {{ $count }} items.</div>
+@if (!$mine)@include('partials.dc-panel', ['kind' => 'sale', 'id' => $s->id, 'file' => $s->dc_file ?? null, 'name' => $s->dc_file_name ?? null])@endif
 <div class="paper">
     @include('partials.paper-head', ['title' => $title, 'sub' => 'No: ' . e($s->no) . '<br>Date: ' . \Carbon\Carbon::parse($s->created_at)->format('d/m/Y')])
     <div class="three">

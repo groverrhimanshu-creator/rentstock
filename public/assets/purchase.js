@@ -16,6 +16,7 @@
         tr.innerHTML =
             '<td><select name="lines[' + i + '][item_id]" data-f="item"><option value="">Select item</option>' + C.items.map(function (x) { return '<option value="' + x.id + '"' + (String(x.id) === String(v.item_id) ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></td>' +
             '<td><input class="cellw" name="lines[' + i + '][config]" value="' + esc(v.config) + '" placeholder="Config" maxlength="150"></td>' +
+            '<td><input class="cell" name="lines[' + i + '][hsn]" data-f="hsn" value="' + esc(v.hsn) + '" maxlength="10" inputmode="numeric" placeholder="HSN"></td>' +
             '<td><input class="cellw" name="lines[' + i + '][tags]" data-f="tags" value="' + esc(v.tags) + '" placeholder="One per piece, comma separated" autocomplete="off"><small class="hint" data-f="tagn"></small></td>' +
             '<td><select name="lines[' + i + '][bc]" data-f="bc"><option value="yes"' + (bc === 'yes' ? ' selected' : '') + '>With barcode</option><option value="no"' + (bc === 'no' ? ' selected' : '') + '>No barcode (count only)</option></select></td>' +
             '<td><input class="cell" type="number" min="1" step="1" name="lines[' + i + '][qty]" data-f="qty" value="' + esc(v.qty == null ? 1 : v.qty) + '"></td>' +
@@ -71,6 +72,8 @@
                 tr.querySelector('[data-f=bc]').value = it.tracked ? 'yes' : 'no';
                 var cfg = tr.querySelector('input[name$="[config]"]');
                 if (!cfg.value) { cfg.value = it.name; }
+                var h = tr.querySelector('[data-f=hsn]');
+                if (h) { h.value = it.hsn || ''; }   // starts as the item's HSN, can be corrected on this purchase
             }
         }
         refresh();

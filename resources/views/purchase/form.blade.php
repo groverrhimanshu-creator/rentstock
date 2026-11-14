@@ -18,7 +18,7 @@
     </div>
     <div class="cd"><h3>Items</h3>
         <div class="tw"><table class="t">
-            <thead><tr><th>Item</th><th>Config</th><th>Brand tag</th><th>Barcode?</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th>Barcodes</th><th></th></tr></thead>
+            <thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Brand tag</th><th>Barcode?</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th>Barcodes</th><th></th></tr></thead>
             <tbody id="rows"></tbody>
         </table></div>
         <div class="rowx" style="margin-top:10px"><button type="button" class="ab sm" id="addline">+ Add another item</button><button type="button" class="ab sm" id="newitem">+ New item (not in the list)</button></div>
@@ -48,7 +48,7 @@
     $pdata = [
         'companyState' => $companyState, 'prefix' => \App\Support\Barcodes::prefix(), 'nextCode' => \App\Support\Barcodes::peek(), 'quickUrl' => route('purchase.quick-item'),
         'items' => $items->map(function ($i) {
-            return ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'gst' => (float) $i->gst_percent];
+            return ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'gst' => (float) $i->gst_percent, 'hsn' => (string) $i->hsn];
         })->values()->all(),
         'lines' => old('lines') ? array_values(old('lines')) : [new \stdClass()],
     ];

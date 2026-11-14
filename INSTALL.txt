@@ -303,3 +303,10 @@ STEP 32 - Stickers: labels across the roll
 - The label page now prints LABELS ACROSS (default 2, as on the client's roll), each with its own width/height and a gap between, one row per printed page. Page size = across x width + gaps, by height (default 103 x 25 mm).
 - On the label page set: Labels across, Label width, Label height, Gap, Move right/down. Saved in that browser. In the print window pick the label printer, paper size = the size shown on the page, margins None, scale 100%.
 - Defaults can be set in .env: LABEL_COLS=2 LABEL_W=50 LABEL_H=25 LABEL_GAP=3 (then php artisan config:clear).
+
+STEP 33 - Purchase edit, DC copy, sticker test print
+- Edit purchase: item, config, HSN, rate and quantity can all be changed. A barcoded line changes item or quantity only while its pieces are in stock and untouched; raising the quantity needs one brand tag per new piece ("New brand tags"); lowering removes the newest untouched pieces. Quantity (no barcode) lines move the stock count. The new-purchase form and the purchase page now carry the HSN of each line.
+- DC copy (PDF/JPG/PNG up to 5 MB) on Sale, Rental challan, Rental invoice, Return and Replacement: choose it when creating, or later: sale and rental pages (panel under the title), Return and Replacement lists (DC copy column). Kept in storage/app/private/dc-copies, deleted with the record.
+- Label page: "Test print (outlines)" prints one row of boxes with a cross, to tune Labels across / width / height / gap / Move right-down to the real roll.
+- MIGRATION: php artisan migrate  (purchase_lines.hsn, dc_file and dc_file_name on sales, rentals, returns, replacements)
+Then: php artisan view:clear (storage must be writable by the web user).

@@ -97,6 +97,9 @@ class SaleController extends Controller
     {
         $fail = fn (string $m) => back()->withInput()->withErrors(['form' => $m]);
 
+        if (\App\Support\DcCopy::bad($request)) {
+            return $fail(\App\Support\DcCopy::MSG);
+        }
         if ($request->input('mode') === 'rentinv') {
             return $this->storeRentalInvoice($request, $fail);
         }
@@ -126,6 +129,7 @@ class SaleController extends Controller
             return $fail($e->getMessage());
         }
         $no = DB::table('sales')->where('id', $id)->value('no');
+        \App\Support\DcCopy::attach($request, 'sales', $id);
         return redirect()->route('sale.show', $id)->with('ok', 'Sale saved. Stock reduced. Invoice ' . $no . ' created.');
     }
 
@@ -218,6 +222,7 @@ class SaleController extends Controller
             return $fail($e->getMessage());
         }
         $no = DB::table('rentals')->where('id', $id)->value('no');
+        \App\Support\DcCopy::attach($request, 'rentals', $id);
         return redirect()->route('rental.show', $id)->with('ok', 'Rental invoice ' . $no . ' created.');
     }
 

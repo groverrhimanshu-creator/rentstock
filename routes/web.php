@@ -58,6 +58,9 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
         Route::post('/purchase/quick-item', [PurchaseController::class, 'quickItem'])->name('purchase.quick-item');
         Route::get('/purchase/{id}', [PurchaseController::class, 'show'])->whereNumber('id')->name('purchase.show');
+        Route::get('/dc/{kind}/{id}', [\App\Http\Controllers\DcCopyController::class, 'show'])->whereNumber('id')->name('dc.show');
+        Route::post('/dc/{kind}/{id}', [\App\Http\Controllers\DcCopyController::class, 'upload'])->whereNumber('id')->name('dc.upload');
+        Route::delete('/dc/{kind}/{id}', [\App\Http\Controllers\DcCopyController::class, 'destroy'])->whereNumber('id')->name('dc.destroy');
         Route::get('/purchase/{id}/invoice', [PurchaseController::class, 'invoice'])->whereNumber('id')->name('purchase.invoice');
 
         Route::get('/sale', [SaleController::class, 'index'])->name('sale.index');

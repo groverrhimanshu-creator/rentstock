@@ -4,7 +4,7 @@
 <div class="pg"><h2>New rental challan<small>Items go out on rent. A delivery challan is created.</small></h2><a class="ab" href="{{ route('rental.index') }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 <div class="msg bad" id="clienterr" hidden></div>
-<form id="rf" method="post" action="{{ route('rental.store') }}" autocomplete="off">
+<form id="rf" method="post" action="{{ route('rental.store') }}" autocomplete="off" enctype="multipart/form-data">
     @csrf
     <div class="cd"><h3>Customer</h3>
         <div class="fg">
@@ -14,6 +14,7 @@
             <label class="f"><span>Type</span><select name="type">@foreach (['GST', 'Bill of supply'] as $o)<option @selected(old('type', 'GST') === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Payment mode</span><select name="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', 'Cash') === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Remark</span><input name="remark" value="{{ old('remark') }}" maxlength="255"></label>
+            @include('partials.dc-field')
         </div>
     </div>
     <div class="cd"><h3>Add items</h3>

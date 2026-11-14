@@ -21,7 +21,12 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
 .lab .t4{font:calc(5.2pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .lab .t5{font:bold calc(5.6pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #pool{display:none}
-@media print{body{background:#fff}.bar{display:none}.sheet{padding:0}.row{margin:0;page-break-after:always;break-after:page}.row:last-child{page-break-after:auto;break-after:auto}.lab{border:0}}
+#testrow{display:none;gap:var(--gap);left:var(--dx);top:var(--dy);position:relative;width:max-content}
+.tl{box-sizing:border-box;width:var(--w);height:var(--h);border:.4mm solid #000;display:flex;align-items:center;justify-content:center;text-align:center;font:bold 7pt Arial,sans-serif;background:linear-gradient(#000,#000) center/100% .15mm no-repeat,linear-gradient(#000,#000) center/.15mm 100% no-repeat;flex:none}
+.tl span{background:#fff;padding:0 1mm}
+body.testmode #sheet{display:none}
+body.testmode #testrow{display:flex}
+@media print{#testrow{margin:0}body{background:#fff}.bar{display:none}.sheet{padding:0}.row{margin:0;page-break-after:always;break-after:page}.row:last-child{page-break-after:auto;break-after:auto}.lab{border:0}}
 </style>
 <style id="pagecss">@page{size:{{ $cols * $w + ($cols - 1) * $gap }}mm {{ $h }}mm;margin:0}</style></head><body>
 <div class="bar">
@@ -34,10 +39,11 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
     <label>Move right (mm)<input id="o-dx" type="number" min="-20" max="20" step="0.5" value="0"></label>
     <label>Move down (mm)<input id="o-dy" type="number" min="-20" max="20" step="0.5" value="0"></label>
     <button type="button" class="g" id="o-reset">Reset</button>
+    <button type="button" class="g" id="o-test">Test print (outlines)</button>
     @if ($back)<a href="{{ $back }}">Back</a>@else<a href="javascript:window.close()">Close</a>@endif
-    <div class="help">Match these to your label roll (measure one label and the gap). Settings are remembered on this computer. In the print window choose your label printer, set the paper size to <b id="o-page"></b> mm, margins None, scale 100%.</div>
+    <div class="help"><b>Not sitting right?</b> Press "Test print" and print it on one row of the roll: each box should sit exactly inside one label, and the cross should hit the middle. Change width, height, gap and Move right/down until it does, then print the real labels. Match these to your label roll (measure one label and the gap). Settings are remembered on this computer. In the print window choose your label printer, set the paper size to <b id="o-page"></b> mm, margins None, scale 100%.</div>
 </div>
-<div class="sheet" id="sheet"></div>
+<div class="sheet"><div id="testrow"></div><div id="sheet"></div></div>
 <div id="pool">
 @foreach ($labels as $l)
     @php($text = $prefix . $l->code)
@@ -62,12 +68,16 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
         ids.forEach(function (k) { var e = document.getElementById('o-' + k); if (e !== document.activeElement) { e.value = v[k]; } });
         // arrange the labels in rows of "cols" labels; every row is one printed page
         var sheet = document.getElementById('sheet'), labs = document.querySelectorAll('#pool .lab'), row;
+        var tr = document.getElementById('testrow'); tr.innerHTML = '';
+        for (var c = 1; c <= v.cols; c++) { var b = document.createElement('div'); b.className = 'tl'; b.innerHTML = '<span>' + c + ': ' + v.w + ' x ' + v.h + ' mm</span>'; tr.appendChild(b); }
         sheet.innerHTML = '';
         labs.forEach(function (l, i) {
             if (i % v.cols === 0) { row = document.createElement('div'); row.className = 'row'; sheet.appendChild(row); }
             row.appendChild(l.cloneNode(true));
         });
     }
+    document.getElementById('o-test').addEventListener('click', function () { document.body.classList.add('testmode'); window.print(); });
+    window.addEventListener('afterprint', function () { document.body.classList.remove('testmode'); });
     ids.forEach(function (k) { document.getElementById('o-' + k).addEventListener('input', function (e) { v[k] = e.target.value; apply(); save(); }); });
     document.getElementById('o-reset').addEventListener('click', function () { v = {}; ids.forEach(function (k) { v[k] = D[k]; }); try { localStorage.removeItem(KEY); } catch (e) {} apply(); });
     load(); apply();

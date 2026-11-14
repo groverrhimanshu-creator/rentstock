@@ -4,10 +4,10 @@
 <div class="pg"><h2>New return<small>Reason, condition and notes are set for each item</small></h2><a class="ab" href="{{ route('return.index') }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 <div class="msg bad" id="clienterr" hidden></div>
-<form id="tf" method="post" action="{{ route('return.store') }}" autocomplete="off">
+<form id="tf" method="post" action="{{ route('return.store') }}" autocomplete="off" enctype="multipart/form-data">
     @csrf
     <div class="cd"><h3>Customer</h3>
-        <div class="fg"><label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }} ({{ $c->on_rent }} on rent)</option>@endforeach</select></label></div>
+        <div class="fg"><label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }} ({{ $c->on_rent }} on rent)</option>@endforeach</select></label>@include('partials.dc-field')</div>
     </div>
     <div class="cd" id="box" hidden>
         <h3>Items on rent (<span id="out-count">0</span>)</h3>

@@ -4,7 +4,7 @@
 <div class="pg"><h2>New replacement</h2><a class="ab" href="{{ route('replacement.index') }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 <div class="msg bad" id="clienterr" hidden></div>
-<form id="pf" method="post" action="{{ route('replacement.store') }}" autocomplete="off">
+<form id="pf" method="post" action="{{ route('replacement.store') }}" autocomplete="off" enctype="multipart/form-data">
     @csrf
     <div class="cd">
         <div class="fg">
@@ -13,6 +13,7 @@
             <label class="f"><span>Faulty item coming back</span><select name="old_code" id="old"><option value="">Select</option></select></label>
             <label class="f"><span>Replace with</span><select name="new_code" id="new" disabled><option value="">Choose the faulty item first</option></select></label>
             <label class="f"><span>Item condition</span><select name="fault" id="fault" required><option value="">Select</option>@foreach (\App\Support\Moves::FAULTS as $x)<option @selected(old('fault') === $x)>{{ $x }}</option>@endforeach</select></label>
+            @include('partials.dc-field')
             <label class="f"><span>Reason</span><input name="reason" id="reason" value="{{ old('reason') }}" maxlength="255" required placeholder="What is wrong with the item"></label>
         </div>
         <div class="f sugwrap full" id="searchbox" style="margin-top:12px" hidden><span>Not the same brand in stock? Search inside this category (brand, model or barcode)</span>

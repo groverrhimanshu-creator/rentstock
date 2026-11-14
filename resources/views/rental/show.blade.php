@@ -16,7 +16,7 @@
         @include('partials.delete-btn', ['action' => route('rental.destroy', $r->id), 'what' => $invoice ? 'rental invoice' : 'challan', 'blocked' => $blocked, 'confirm' => $invoice ? 'Delete rental invoice ' . $r->no . '? This cannot be undone.' : 'Delete challan ' . $r->no . '? Its items go back into stock. This cannot be undone.'])
     @endif
     <a class="ab" href="{{ $back }}">Back</a></div></div>
-@if (!$mine)<div class="msg ok">{{ $invoice ? $count . ' rented items billed' . ($soldCount ? ' and ' . $soldCount . ' sold ' . ($soldCount === 1 ? 'item' : 'items') . ' added (taken out of stock)' : '. Stock is unchanged') . '.' : $count . ' items are now on rent with ' . $r->cname . '.' }}</div>@endif
+@if (!$mine)@include('partials.dc-panel', ['kind' => 'rental', 'id' => $r->id, 'file' => $r->dc_file ?? null, 'name' => $r->dc_file_name ?? null])<div class="msg ok">{{ $invoice ? $count . ' rented items billed' . ($soldCount ? ' and ' . $soldCount . ' sold ' . ($soldCount === 1 ? 'item' : 'items') . ' added (taken out of stock)' : '. Stock is unchanged') . '.' : $count . ' items are now on rent with ' . $r->cname . '.' }}</div>@endif
 @if ($invoice)
 <div class="paper">
     @include('partials.paper-head', ['title' => $r->type === 'GST' ? 'TAX INVOICE' : 'INVOICE', 'sub' => 'Rental invoice · No: ' . e($r->no) . '<br>Date: ' . Docs::d($r->created_at) . '<br>Rent for: ' . Docs::d($r->period_from) . ' to ' . Docs::d($r->period_to)])

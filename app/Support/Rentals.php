@@ -126,6 +126,7 @@ class Rentals
                 $now = now();
                 self::addHistory(array_map(fn ($c) => ['code' => $c, 'at' => $now, 'text' => 'Rental cancelled · challan ' . $r->no . ' deleted', 'user_id' => $userId], $codes));
             }
+            DcCopy::purge('rentals', $id);
             DB::table('rentals')->where('id', $id)->delete();   // the lines go with it
             Audit::log('delete', 'rental challan', $r->no, 'Customer ' . $r->name . ' · ' . count($codes) . ' pieces back in stock');
         });
@@ -427,6 +428,7 @@ class Rentals
                     DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$l->item_id, $l->qty]);
                 }
             }
+            DcCopy::purge('rentals', $id);
             DB::table('rentals')->where('id', $id)->delete();   // the lines go with it
             Audit::log('delete', 'rental invoice', $r->no, 'Customer ' . $r->name . ' · total ' . $r->total . ($sold->count() ? ' · ' . $sold->count() . ' sold lines back in stock' : ''));
         });

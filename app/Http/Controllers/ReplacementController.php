@@ -17,7 +17,7 @@ class ReplacementController extends Controller
         $q = trim((string) $request->query('q', ''));
         $prefix = Barcodes::prefix();
         $query = DB::table('replacements as r')->join('customers as c', 'c.id', '=', 'r.customer_id')
-            ->select('r.id', 'r.created_at', 'r.kind', 'r.old_code', 'r.new_code', 'r.cn', 'r.fault', 'r.reason', 'c.name as customer');
+            ->select('r.id', 'r.created_at', 'r.kind', 'r.old_code', 'r.new_code', 'r.cn', 'r.fault', 'r.reason', 'r.dc_file', 'c.name as customer');
         if ($q !== '') {
             $like = '%' . $q . '%';
             $query->where(function ($w) use ($like, $prefix) {
@@ -77,6 +77,9 @@ class ReplacementController extends Controller
     public function store(Request $request)
     {
         $fail = fn (string $m) => back()->withInput()->withErrors(['form' => $m]);
+        if (\App\Support\DcCopy::bad($request)) {
+            return $fail(\App\Support\DcCopy::MSG);
+        }
         $customerId = (int) $request->input('customer_id');
         if (!$customerId || !DB::table('customers')->where('id', $customerId)->exists()) {
             return $fail('Please choose a customer.');
@@ -96,13 +99,14 @@ class ReplacementController extends Controller
             return $fail('Please enter the reason for the replacement.');
         }
         try {
-            Moves::createReplacement([
+            $rid = Moves::createReplacement([
                 'kind' => $kind, 'customer_id' => $customerId, 'old_code' => $old, 'new_code' => $new,
                 'reason' => $reason, 'fault' => $fault,
             ], $request->user()->id);
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());
         }
+        \App\Support\DcCopy::attach($request, 'replacements', (int) $rid);
         $cn = DB::table('replacements')->where('old_code', $old)->where('new_code', $new)->orderByDesc('id')->value('cn');
         return redirect()->route('replacement.index')->with('ok', 'Replacement saved.' . ($cn ? ' Credit note ' . $cn . ' created.' : ''));
     }

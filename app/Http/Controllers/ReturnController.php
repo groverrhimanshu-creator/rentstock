@@ -16,7 +16,7 @@ class ReturnController extends Controller
         $n = \App\Support\Pager::size($request->query('n'));
         $q = trim((string) $request->query('q', ''));
         $query = DB::table('returns as r')->join('customers as c', 'c.id', '=', 'r.customer_id')
-            ->select('r.id', 'r.no', 'r.created_at', 'r.reason', 'c.name as customer')
+            ->select('r.id', 'r.no', 'r.created_at', 'r.reason', 'r.dc_file', 'c.name as customer')
             ->selectRaw('(select count(*) from return_lines l where l.return_id = r.id) as items');
         if ($q !== '') {
             $like = '%' . $q . '%';
@@ -47,6 +47,9 @@ class ReturnController extends Controller
     public function store(Request $request)
     {
         $fail = fn (string $m) => back()->withInput()->withErrors(['form' => $m]);
+        if (\App\Support\DcCopy::bad($request)) {
+            return $fail(\App\Support\DcCopy::MSG);
+        }
         $customerId = (int) $request->input('customer_id');
         if (!$customerId || !DB::table('customers')->where('id', $customerId)->exists()) {
             return $fail('Please choose a customer.');
@@ -82,6 +85,7 @@ class ReturnController extends Controller
             return $fail($e->getMessage());
         }
         $no = DB::table('returns')->where('id', $id)->value('no');
+        \App\Support\DcCopy::attach($request, 'returns', $id);
         return redirect()->route('return.index')->with('ok', 'Return ' . $no . ' saved. ' . count($items) . ' items back in the system.');
     }
 

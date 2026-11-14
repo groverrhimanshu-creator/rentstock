@@ -31,11 +31,12 @@ class Purchases
             ]);
             $added = 0;
             foreach ($d['lines'] as $l) {
-                $item = DB::table('items')->where('id', $l['item_id'])->first(['id', 'name', 'tracked']);
+                $item = DB::table('items')->where('id', $l['item_id'])->first(['id', 'name', 'tracked', 'hsn']);
                 $want = $l['barcode'] === null ? (bool) $item->tracked : (bool) $l['barcode'];
                 $config = $l['config'] !== '' ? $l['config'] : $item->name;
                 $lid = DB::table('purchase_lines')->insertGetId([
                     'purchase_id' => $pid, 'item_id' => $item->id, 'config' => $config, 'qty' => $l['qty'], 'rate' => $l['rate'], 'barcoded' => $want,
+                    'hsn' => ($l['hsn'] ?? '') !== '' ? $l['hsn'] : $item->hsn,
                 ]);
                 if ($want) {
                     $first = Barcodes::reserve($l['qty']);
@@ -65,6 +66,24 @@ class Purchases
             }
             return [$pid, $added];
         });
+    }
+
+    /* Adds ($delta > 0) or takes off ($delta < 0) quantity of a by-quantity item. Does nothing for items that are not counted in stock. */
+    private static function bumpQty(int $itemId, int $delta, string $why): void
+    {
+        if (Stock::unstocked([$itemId]) || $delta === 0) {
+            return;
+        }
+        if ($delta < 0) {
+            $have = (int) DB::table('item_qty')->where('item_id', $itemId)->value('qty');
+            if ($have < -$delta) {
+                $name = (string) DB::table('items')->where('id', $itemId)->value('name');
+                throw new \RuntimeException('Only ' . $have . ' of "' . $name . '" are left in stock, but ' . (-$delta) . ' must come off (' . $why . '). The rest were already sold or used.');
+            }
+            DB::table('item_qty')->where('item_id', $itemId)->decrement('qty', -$delta);
+            return;
+        }
+        DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$itemId, $delta]);
     }
 
     /* ---------- edit and delete ---------- */
@@ -124,8 +143,9 @@ class Purchases
     }
 
     /*
-     * Edit: the details at the top, and the config and rate of each line. Items and quantities stay as saved,
-     * because the stock was made from them. $d: supplier_id, inv_no, inv_date, type, pay_mode, store_id, lines => [line id => [config, rate]]
+     * Edit: the details at the top and every line: item, config, HSN, rate and quantity.
+     * A barcoded line can change item or quantity only while its pieces are in stock and untouched; raising the quantity needs one brand tag per new piece.
+     * $d: supplier_id, inv_no, inv_date, type, pay_mode, store_id, lines => [line id => [config, rate, hsn, item_id, qty, tags]]
      */
     public static function update(int $id, array $d, ?int $userId): void
     {
@@ -143,12 +163,96 @@ class Purchases
                 DB::table('devices')->where('purchase_id', $id)->where('status', 'in_stock')->update(['store_id' => $d['store_id']]);
             }
             $changes = [];
+            $supplier = (string) DB::table('suppliers')->where('id', $d['supplier_id'])->value('name');
             foreach (DB::table('purchase_lines')->where('purchase_id', $id)->get() as $l) {
                 $new = $d['lines'][$l->id] ?? null;
                 if (!$new) {
                     continue;
                 }
-                $config = $new['config'] !== '' ? $new['config'] : (string) DB::table('items')->where('id', $l->item_id)->value('name');
+                $itemId = (int) ($new['item_id'] ?? $l->item_id) ?: (int) $l->item_id;
+                $qty = (int) ($new['qty'] ?? $l->qty) ?: (int) $l->qty;
+                $codes = DB::table('devices')->where('purchase_line_id', $l->id)->orderBy('code')->lockForUpdate()->pluck('code')->map(fn ($c) => (int) $c)->all();
+                $names = DB::table('items')->whereIn('id', [$itemId, $l->item_id])->pluck('name', 'id');
+
+                // 1. A different item.
+                if ($itemId !== (int) $l->item_id) {
+                    $newItem = DB::table('items')->where('id', $itemId)->first(['id', 'name', 'tracked']);
+                    if (!$newItem) {
+                        throw new \RuntimeException('One of the items is not in the Item master.');
+                    }
+                    if ($l->barcoded) {
+                        if (!$newItem->tracked) {
+                            throw new \RuntimeException('"' . $newItem->name . '" is counted by quantity, so it cannot replace a barcoded item. Choose a barcoded item.');
+                        }
+                        if ($codes) {
+                            if (DB::table('devices')->whereIn('code', $codes)->where('status', '!=', 'in_stock')->exists() || Stock::movedCount($codes) > 0) {
+                                throw new \RuntimeException('The item of "' . ($names[$l->item_id] ?? '') . '" cannot be changed. Some of its barcoded pieces have already been sold, rented, repaired or changed.');
+                            }
+                            DB::table('devices')->whereIn('code', $codes)->update(['item_id' => $itemId]);
+                            $now = now();
+                            foreach (array_chunk($codes, 500) as $c) {
+                                DB::table('device_history')->insert(array_map(fn ($x) => ['code' => $x, 'at' => $now, 'text' => 'Item changed from ' . ($names[$l->item_id] ?? '') . ' to ' . $newItem->name . ' (purchase no ' . $id . ' edited)', 'user_id' => $userId], $c));
+                            }
+                        }
+                    } else {
+                        self::bumpQty((int) $l->item_id, -(int) $l->qty, 'it was taken off "' . ($names[$l->item_id] ?? '') . '"');
+                        self::bumpQty($itemId, (int) $l->qty, '');
+                    }
+                    $changes[] = 'line ' . $l->id . ' item "' . ($names[$l->item_id] ?? '') . '" to "' . $newItem->name . '"';
+                }
+
+                // 2. A different quantity.
+                if ($qty !== (int) $l->qty) {
+                    $diff = $qty - (int) $l->qty;
+                    $iname = (string) DB::table('items')->where('id', $itemId)->value('name');
+                    $cfg = $new['config'] !== '' ? $new['config'] : $iname;
+                    if ($l->barcoded && $diff > 0) {
+                        $tags = $new['tags'] ?? [];
+                        if (count($tags) !== $diff) {
+                            throw new \RuntimeException('"' . $iname . '": to add ' . $diff . ' piece' . ($diff === 1 ? '' : 's') . ' enter ' . $diff . ' brand tag' . ($diff === 1 ? '' : 's') . ' in "New brand tags", separated by commas. You entered ' . count($tags) . '.');
+                        }
+                        $first = Barcodes::reserve($diff);
+                        $now = now();
+                        $dev = [];
+                        $his = [];
+                        $cfl = [];
+                        for ($i = 0; $i < $diff; $i++) {
+                            $dev[] = ['code' => $first + $i, 'item_id' => $itemId, 'config' => $cfg, 'brand_tag' => $tags[$i], 'status' => 'in_stock', 'store_id' => $d['store_id'], 'purchase_id' => $id, 'purchase_line_id' => $l->id, 'created_at' => $now];
+                            $his[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ', quantity raised)', 'user_id' => $userId];
+                            $cfl[] = ['code' => $first + $i, 'event' => 'start', 'new' => $cfg, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ')', 'user_id' => $userId, 'at' => $now];
+                        }
+                        foreach (array_chunk($dev, 500) as $c) {
+                            DB::table('devices')->insert($c);
+                        }
+                        foreach (array_chunk($his, 500) as $c) {
+                            DB::table('device_history')->insert($c);
+                        }
+                        ConfigLog::addMany($cfl);
+                    } elseif ($l->barcoded) {
+                        $drop = -$diff;
+                        $mine = DB::table('devices')->where('purchase_line_id', $l->id)->where('status', 'in_stock')->orderByDesc('code')->pluck('code')->map(fn ($c) => (int) $c)->all();
+                        $pick = [];
+                        foreach ($mine as $c) {
+                            if (Stock::movedCount([$c]) === 0) {
+                                $pick[] = $c;
+                            }
+                            if (count($pick) === $drop) {
+                                break;
+                            }
+                        }
+                        if (count($pick) < $drop) {
+                            throw new \RuntimeException('"' . $iname . '": the quantity cannot go down by ' . $drop . '. Only ' . count($pick) . ' of its pieces are still in stock and untouched.');
+                        }
+                        DB::table('devices')->whereIn('code', $pick)->delete();   // their history goes with them
+                    } else {
+                        self::bumpQty($itemId, $diff, 'the quantity was lowered');
+                    }
+                    $changes[] = 'line ' . $l->id . ' quantity ' . $l->qty . ' to ' . $qty;
+                }
+
+                // 3. Config, HSN and rate.
+                $iname = (string) DB::table('items')->where('id', $itemId)->value('name');
+                $config = $new['config'] !== '' ? $new['config'] : $iname;
                 if ($config !== $l->config) {
                     $log = [];
                     foreach (DB::table('devices')->where('purchase_line_id', $l->id)->where('status', 'in_stock')->get(['code', 'config']) as $dv) {
@@ -160,10 +264,14 @@ class Purchases
                     DB::table('devices')->where('purchase_line_id', $l->id)->where('status', 'in_stock')->update(['config' => $config]);
                     $changes[] = 'line ' . $l->id . ' config "' . $l->config . '" to "' . $config . '"';
                 }
+                $hsn = ($new['hsn'] ?? '') !== '' ? $new['hsn'] : (string) ($l->hsn ?? '');
+                if ($hsn !== (string) ($l->hsn ?? '')) {
+                    $changes[] = 'line ' . $l->id . ' HSN ' . ($l->hsn ?: '-') . ' to ' . $hsn;
+                }
                 if (abs((float) $l->rate - $new['rate']) > 0.0001) {
                     $changes[] = 'line ' . $l->id . ' rate ' . $l->rate . ' to ' . $new['rate'];
                 }
-                DB::table('purchase_lines')->where('id', $l->id)->update(['config' => $config, 'rate' => $new['rate']]);
+                DB::table('purchase_lines')->where('id', $l->id)->update(['item_id' => $itemId, 'qty' => $qty, 'config' => $config, 'rate' => $new['rate'], 'hsn' => $hsn !== '' ? $hsn : null]);
             }
             Audit::log('edit', 'purchase', $id, $changes ? implode('; ', $changes) : 'details at the top');
         });

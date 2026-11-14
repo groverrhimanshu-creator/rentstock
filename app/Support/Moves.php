@@ -135,6 +135,7 @@ class Moves
                 DB::table('rental_lines')->where('id', $l->id)->update(['returned_at' => null, 'return_id' => null]);
                 self::history((int) $l->code, 'Return cancelled · return ' . $r->no . ' deleted, back on rent with ' . $r->name, $userId, $now);
             }
+            DcCopy::purge('returns', $id);
             DB::table('returns')->where('id', $id)->delete();   // the lines go with it
             Audit::log('delete', 'return', $r->no, 'Customer ' . $r->name . ' · ' . count($codes) . ' pieces back on rent');
         });
@@ -257,6 +258,7 @@ class Moves
             DB::table('devices')->where('code', $r->new_code)->update(['status' => 'in_stock', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
             self::history((int) $r->old_code, 'Replacement cancelled · back with ' . $name, $userId, $now);
             self::history((int) $r->new_code, 'Replacement cancelled · back in stock', $userId, $now);
+            DcCopy::purge('replacements', $id);
             DB::table('replacements')->where('id', $id)->delete();
             Audit::log('delete', 'replacement', $id, $r->kind . ' · ' . self::bc((int) $r->old_code) . ' to ' . self::bc((int) $r->new_code) . ($r->cn ? ' · credit note ' . $r->cn . ' number is not reused' : ''));
         });
