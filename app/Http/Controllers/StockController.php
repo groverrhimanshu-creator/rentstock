@@ -135,6 +135,25 @@ class StockController extends Controller
         return redirect()->route('stock.device', $code)->with('ok', 'Item updated');
     }
 
+    /* A repaired piece goes back in stock. */
+    public function repaired(Request $request, int $code)
+    {
+        abort_unless(DB::table('devices')->where('code', $code)->exists(), 404);
+        $n = Stock::markRepaired([$code], mb_substr(trim((string) $request->input('note', '')), 0, 200), $request->user()->id);
+        return redirect()->route('stock.device', $code)->with($n ? 'ok' : 'bad', $n ? Barcodes::text($code) . ' is repaired and back in stock.' : Barcodes::text($code) . ' is not in repair.');
+    }
+
+    /* Several repaired pieces at once (ticked on Inventory > In repair). */
+    public function repairedMany(Request $request)
+    {
+        $codes = array_map('intval', (array) $request->input('codes', []));
+        if (!$codes) {
+            return back()->with('bad', 'Tick at least one item.');
+        }
+        $n = Stock::markRepaired($codes, mb_substr(trim((string) $request->input('note', '')), 0, 200), $request->user()->id);
+        return redirect()->route('stock.inventory', ['status' => 'repair'])->with($n ? 'ok' : 'bad', $n ? $n . ' ' . ($n === 1 ? 'item is' : 'items are') . ' repaired and back in stock.' : 'None of those items are in repair.');
+    }
+
     public function deviceDestroy(Request $request, int $code)
     {
         try {

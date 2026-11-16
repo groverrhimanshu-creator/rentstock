@@ -35,6 +35,55 @@ class PurchaseController extends Controller
         }
     }
 
+    /* New purchase rows from the form (rows with no item or no quantity are ignored). Returns the rows, or an error message as a string. */
+    private function parseNewLines(array $raw)
+    {
+        $lines = [];
+        foreach ($raw as $l) {
+            $itemId = (int) ($l['item_id'] ?? 0);
+            $qty = (string) ($l['qty'] ?? '');
+            if (!$itemId || $qty === '' || (float) $qty <= 0) {
+                continue;   // an empty row is ignored, as in the prototype
+            }
+            if (!ctype_digit($qty) || (int) $qty > 5000) {
+                return ('Quantity must be a whole number from 1 to 5000.');
+            }
+            $rate = (string) ($l['rate'] ?? '');
+            if ($rate !== '' && (!is_numeric($rate) || (float) $rate < 0)) {
+                return ('Rate must be a number, zero or more.');
+            }
+            if (!DB::table('items')->where('id', $itemId)->exists()) {
+                return ('One of the items is not in the Item master.');
+            }
+            $hsnIn = trim((string) ($l['hsn'] ?? ''));
+            if ($hsnIn !== '' && !preg_match('/^[0-9]{1,10}$/', $hsnIn)) {
+                return ('HSN code must be digits only (10 at most).');
+            }
+            $bc = ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null);
+            $tags = array_values(array_filter(array_map('trim', preg_split('/[,;\n]+/', (string) ($l['tags'] ?? ''))), fn ($t) => $t !== ''));
+            $tracked = $bc === null ? (bool) DB::table('items')->where('id', $itemId)->value('tracked') : $bc;
+            if ($tracked) {
+                $name = (string) DB::table('items')->where('id', $itemId)->value('name');
+                if (count($tags) !== (int) $qty) {
+                    return ('Brand tag: ' . $name . ' needs ' . (int) $qty . ' brand tag' . ((int) $qty === 1 ? '' : 's') . ' (one for each piece, separated by commas). You entered ' . count($tags) . '.');
+                }
+                foreach ($tags as $t) {
+                    if (mb_strlen($t) > 60) {
+                        return ('A brand tag can have 60 characters at most.');
+                    }
+                }
+            } elseif ($tags) {
+                $tags = array_map(fn ($t) => mb_substr($t, 0, 60), array_slice($tags, 0, 500));   // kept as a note on the line
+            }
+            $lines[] = [
+                'hsn' => $hsnIn, 'tags' => $tags, 'item_id' => $itemId, 'config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'qty' => (int) $qty,
+                'rate' => $rate === '' ? 0 : round((float) $rate, 2),
+                'barcode' => ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null),
+            ];
+        }
+        return $lines;
+    }
+
     /*
      * Reads a CSV or Excel (.xlsx) file of pieces and returns purchase rows. Every file row is one piece:
      * Model/Product (an item of the Item master), Brand Tag, Config, HSN, Rate. Pieces with the same item, config, HSN and rate become one row.
@@ -190,48 +239,9 @@ class PurchaseController extends Controller
         if ($file === false) {
             return $fail(self::INVOICE_MSG);
         }
-        $lines = [];
-        foreach ((array) $request->input('lines', []) as $l) {
-            $itemId = (int) ($l['item_id'] ?? 0);
-            $qty = (string) ($l['qty'] ?? '');
-            if (!$itemId || $qty === '' || (float) $qty <= 0) {
-                continue;   // an empty row is ignored, as in the prototype
-            }
-            if (!ctype_digit($qty) || (int) $qty > 5000) {
-                return $fail('Quantity must be a whole number from 1 to 5000.');
-            }
-            $rate = (string) ($l['rate'] ?? '');
-            if ($rate !== '' && (!is_numeric($rate) || (float) $rate < 0)) {
-                return $fail('Rate must be a number, zero or more.');
-            }
-            if (!DB::table('items')->where('id', $itemId)->exists()) {
-                return $fail('One of the items is not in the Item master.');
-            }
-            $hsnIn = trim((string) ($l['hsn'] ?? ''));
-            if ($hsnIn !== '' && !preg_match('/^[0-9]{1,10}$/', $hsnIn)) {
-                return $fail('HSN code must be digits only (10 at most).');
-            }
-            $bc = ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null);
-            $tags = array_values(array_filter(array_map('trim', preg_split('/[,;\n]+/', (string) ($l['tags'] ?? ''))), fn ($t) => $t !== ''));
-            $tracked = $bc === null ? (bool) DB::table('items')->where('id', $itemId)->value('tracked') : $bc;
-            if ($tracked) {
-                $name = (string) DB::table('items')->where('id', $itemId)->value('name');
-                if (count($tags) !== (int) $qty) {
-                    return $fail('Brand tag: ' . $name . ' needs ' . (int) $qty . ' brand tag' . ((int) $qty === 1 ? '' : 's') . ' (one for each piece, separated by commas). You entered ' . count($tags) . '.');
-                }
-                foreach ($tags as $t) {
-                    if (mb_strlen($t) > 60) {
-                        return $fail('A brand tag can have 60 characters at most.');
-                    }
-                }
-            } elseif ($tags) {
-                $tags = array_map(fn ($t) => mb_substr($t, 0, 60), array_slice($tags, 0, 500));   // kept as a note on the line
-            }
-            $lines[] = [
-                'hsn' => $hsnIn, 'tags' => $tags, 'item_id' => $itemId, 'config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'qty' => (int) $qty,
-                'rate' => $rate === '' ? 0 : round((float) $rate, 2),
-                'barcode' => ($l['bc'] ?? '') === 'yes' ? true : (($l['bc'] ?? '') === 'no' ? false : null),
-            ];
+        $lines = $this->parseNewLines((array) $request->input('lines', []));
+        if (is_string($lines)) {
+            return $fail($lines);
         }
         if (!$lines) {
             return $fail('Add at least one item.');
@@ -312,7 +322,8 @@ class PurchaseController extends Controller
         return view('purchase.edit', [
             'p' => $p,
             'lines' => DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn']),
-            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked']),
+            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked', 'hsn']),
+            'why' => DB::table('purchase_lines')->where('purchase_id', $id)->get()->mapWithKeys(fn ($l) => [$l->id => Purchases::lineRemoveBlocker($l)])->all(),
             'codes' => DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id'])->groupBy('purchase_line_id'),
             'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name']),
             'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']),
@@ -367,12 +378,17 @@ class PurchaseController extends Controller
             $lines[(int) $lid] = ['config' => mb_substr(trim((string) ($l['config'] ?? '')), 0, 150), 'rate' => round((float) $rate, 2),
                 'hsn' => $hsn, 'item_id' => $itemId, 'qty' => $qty === '' ? 0 : (int) $qty, 'tags' => $tags];
         }
+        $add = $this->parseNewLines((array) $request->input('add', []));
+        if (is_string($add)) {
+            return $fail($add);
+        }
+        $remove = array_map('intval', (array) $request->input('remove', []));
         try {
             Purchases::update($id, [
                 'supplier_id' => $supplierId, 'inv_no' => mb_substr(trim((string) $request->input('inv_no', '')), 0, 60), 'inv_date' => $date,
                 'type' => $request->input('type') === 'Bill of supply' ? 'Bill of supply' : 'GST',
                 'pay_mode' => in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : 'Cash',
-                'store_id' => $storeId, 'lines' => $lines,
+                'store_id' => $storeId, 'lines' => $lines, 'remove' => $remove, 'add' => $add,
             ], $request->user()->id);
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());

@@ -19,7 +19,7 @@
     </div>
     <div class="cd"><h3>Items</h3>
         <div class="tw"><table class="t">
-            <thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Barcode?</th><th class="num">Qty</th><th>New brand tags</th><th>Rate</th><th>Barcodes</th></tr></thead>
+            <thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Barcode?</th><th class="num">Qty</th><th>New brand tags</th><th>Rate</th><th>Barcodes</th><th>Take off</th></tr></thead>
             <tbody>
                 @foreach ($lines as $l)
                     <tr><td><select name="lines[{{ $l->id }}][item_id]">@foreach ($items as $i)@if (!$l->barcoded || $i->tracked)<option value="{{ $i->id }}" @selected((string) old('lines.' . $l->id . '.item_id', $l->item_id) === (string) $i->id)>{{ $i->name }}</option>@endif @endforeach</select></td>
@@ -29,12 +29,19 @@
                         <td><input class="cell" type="number" min="1" max="5000" step="1" name="lines[{{ $l->id }}][qty]" value="{{ old('lines.' . $l->id . '.qty', $l->qty) }}"></td>
                         <td>@if ($l->barcoded)<input class="cellw" name="lines[{{ $l->id }}][tags]" value="{{ old('lines.' . $l->id . '.tags') }}" placeholder="Only if you raise the quantity" autocomplete="off">@else - @endif</td>
                         <td><input class="cell" type="number" min="0" step="0.01" name="lines[{{ $l->id }}][rate]" value="{{ old('lines.' . $l->id . '.rate', $l->rate) }}"></td>
-                        <td><span class="codes">{{ isset($codes[$l->id]) ? $codes[$l->id]->map(fn ($c) => \App\Support\Barcodes::text($c->code))->implode(', ') : ($l->barcoded ? '' : 'Quantity item') }}</span></td></tr>
+                        <td><span class="codes">{{ isset($codes[$l->id]) ? $codes[$l->id]->map(fn ($c) => \App\Support\Barcodes::text($c->code))->implode(', ') : ($l->barcoded ? '' : 'Quantity item') }}</span></td>
+                        <td>@if ($why[$l->id] ?? null)<small class="hint" title="{{ $why[$l->id] }}">Cannot: {{ \Illuminate\Support\Str::limit($why[$l->id], 60) }}</small>@else<label><input type="checkbox" name="remove[]" value="{{ $l->id }}"> Remove</label>@endif</td></tr>
                 @endforeach
             </tbody>
         </table></div>
-        <div class="msg info">You can change the item, config, HSN code, rate and quantity. A barcoded item or quantity can be changed only while its pieces are still in stock and untouched (not sold, rented, repaired or changed). To raise the quantity of a barcoded item, enter one brand tag for each new piece, separated by commas; lowering it removes the newest untouched pieces.</div>
+        <h3 style="margin-top:16px">Add items to this purchase</h3>
+        <div class="tw" id="addbox" hidden><table class="t"><thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Barcode?</th><th class="num">Qty</th><th>Brand tags</th><th>Rate</th><th></th></tr></thead><tbody id="addrows"></tbody></table></div>
+        <div class="rowx" style="margin-top:8px"><button type="button" class="ab sm" id="addnew">+ Add an item</button></div>
+        <div class="msg info">You can add items, take items off (tick Remove), and change the item, config, HSN code, rate and quantity. A barcoded item or quantity can be changed only while its pieces are still in stock and untouched (not sold, rented, repaired or changed). To raise the quantity of a barcoded item, enter one brand tag for each new piece, separated by commas; lowering it removes the newest untouched pieces.</div>
+        <div class="msg bad" id="clienterr" hidden></div>
         <div class="rowx"><button class="ab solid">Save</button><a class="ab" href="{{ route('purchase.show', $p->id) }}">Cancel</a></div>
     </div>
 </form>
+<script>window.PEDIT = {!! json_encode(['items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'hsn' => (string) $i->hsn])->values()->all()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
+<script src="{{ \App\Support\Assets::url('assets/purchaseadd.js') }}"></script>
 @endsection

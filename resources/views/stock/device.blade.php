@@ -12,6 +12,12 @@
         @include('partials.delete-btn', ['action' => route('stock.device.destroy', $d->code), 'what' => 'item', 'blocked' => $blocked, 'confirm' => 'Delete ' . $text . '? The item and its history will be removed. This cannot be undone.'])
     @endif
     <a class="ab" href="{{ route('stock.inventory') }}">Back</a></div></div>
+@if ($d->status === 'repair')
+<form class="cd noprint" method="post" action="{{ route('stock.device.repaired', $d->code) }}" style="margin-bottom:12px">@csrf
+    <div class="rowx" style="align-items:flex-end;flex-wrap:wrap"><label class="f" style="flex:1;min-width:240px"><span>Repaired and ready to use? (note, optional)</span><input name="note" maxlength="200" placeholder="for example: screen replaced"></label>
+        <button class="ab solid" onclick="return confirm('Put this item back in stock?')">Repaired, put back in stock</button></div>
+</form>
+@endif
 <div class="cols">
     <div class="cd"><h3>Details</h3>
         <div class="sumb">

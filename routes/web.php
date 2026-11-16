@@ -42,6 +42,8 @@ Route::middleware(['auth', 'role'])->group(function () {
     Route::middleware('role:admin,subadmin')->prefix('stock')->group(function () {
         Route::get('/inventory', [StockController::class, 'inventory'])->name('stock.inventory');
         Route::get('/device/{code}', [StockController::class, 'device'])->whereNumber('code')->name('stock.device');
+        Route::post('/device/{code}/repaired', [StockController::class, 'repaired'])->whereNumber('code')->name('stock.device.repaired');
+        Route::post('/repaired', [StockController::class, 'repairedMany'])->name('stock.repaired');
         Route::get('/entries', [StockController::class, 'entries'])->name('stock.entries');
         Route::get('/entries/{id}/export', [StockController::class, 'entryExport'])->whereNumber('id')->name('stock.entry.export');
         Route::get('/import', [StockController::class, 'importShow'])->name('stock.import');

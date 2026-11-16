@@ -31,42 +31,51 @@ class Purchases
             ]);
             $added = 0;
             foreach ($d['lines'] as $l) {
-                $item = DB::table('items')->where('id', $l['item_id'])->first(['id', 'name', 'tracked', 'hsn']);
-                $want = $l['barcode'] === null ? (bool) $item->tracked : (bool) $l['barcode'];
-                $config = $l['config'] !== '' ? $l['config'] : $item->name;
-                $lid = DB::table('purchase_lines')->insertGetId([
-                    'purchase_id' => $pid, 'item_id' => $item->id, 'config' => $config, 'qty' => $l['qty'], 'rate' => $l['rate'], 'barcoded' => $want,
-                    'hsn' => ($l['hsn'] ?? '') !== '' ? $l['hsn'] : $item->hsn,
-                    'brand_tags' => !$want && !empty($l['tags']) ? mb_substr(implode(', ', $l['tags']), 0, 2000) : null,
-                ]);
-                if ($want) {
-                    $first = Barcodes::reserve($l['qty']);
-                    $now = now();
-                    $devices = [];
-                    $history = [];
-                    $cfglog = [];
-                    for ($i = 0; $i < $l['qty']; $i++) {
-                        $devices[] = [
-                            'code' => $first + $i, 'item_id' => $item->id, 'config' => $config, 'brand_tag' => ($l['tags'][$i] ?? '') !== '' ? $l['tags'][$i] : self::tag(), 'status' => 'in_stock',
-                            'store_id' => $d['store_id'], 'purchase_id' => $pid, 'purchase_line_id' => $lid, 'created_at' => $now,
-                        ];
-                        $history[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId];
-                        $cfglog[] = ['code' => $first + $i, 'event' => 'start', 'new' => $config, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId, 'at' => $now];
-                    }
-                    foreach (array_chunk($devices, 500) as $c) {
-                        DB::table('devices')->insert($c);
-                    }
-                    foreach (array_chunk($history, 500) as $c) {
-                        DB::table('device_history')->insert($c);
-                    }
-                    ConfigLog::addMany($cfglog);
-                    $added += $l['qty'];
-                } elseif (!Stock::unstocked([$item->id])) {
-                    DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$item->id, $l['qty']]);
-                }
+                $added += self::makeLine($pid, $l, $d, $supplier, $userId);
             }
             return [$pid, $added];
         });
+    }
+
+    /* Makes one purchase line and what comes with it (barcoded pieces, or the stock count). Returns the number of barcoded pieces made. */
+    private static function makeLine(int $pid, array $l, array $d, string $supplier, ?int $userId): int
+    {
+        $added = 0;
+        $item = DB::table('items')->where('id', $l['item_id'])->first(['id', 'name', 'tracked', 'hsn']);
+        $want = $l['barcode'] === null ? (bool) $item->tracked : (bool) $l['barcode'];
+        $config = $l['config'] !== '' ? $l['config'] : $item->name;
+        $lid = DB::table('purchase_lines')->insertGetId([
+            'purchase_id' => $pid, 'item_id' => $item->id, 'config' => $config, 'qty' => $l['qty'], 'rate' => $l['rate'], 'barcoded' => $want,
+            'hsn' => ($l['hsn'] ?? '') !== '' ? $l['hsn'] : $item->hsn,
+            'brand_tags' => !$want && !empty($l['tags']) ? mb_substr(implode(', ', $l['tags']), 0, 2000) : null,
+        ]);
+        if ($want) {
+            $first = Barcodes::reserve($l['qty']);
+            $now = now();
+            $devices = [];
+            $history = [];
+            $cfglog = [];
+            for ($i = 0; $i < $l['qty']; $i++) {
+                $devices[] = [
+                    'code' => $first + $i, 'item_id' => $item->id, 'config' => $config, 'brand_tag' => ($l['tags'][$i] ?? '') !== '' ? $l['tags'][$i] : self::tag(), 'status' => 'in_stock',
+                    'store_id' => $d['store_id'], 'purchase_id' => $pid, 'purchase_line_id' => $lid, 'created_at' => $now,
+                ];
+                $history[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId];
+                $cfglog[] = ['code' => $first + $i, 'event' => 'start', 'new' => $config, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId, 'at' => $now];
+            }
+            foreach (array_chunk($devices, 500) as $c) {
+                DB::table('devices')->insert($c);
+            }
+            foreach (array_chunk($history, 500) as $c) {
+                DB::table('device_history')->insert($c);
+            }
+            ConfigLog::addMany($cfglog);
+            $added = $l['qty'];
+        } elseif (!Stock::unstocked([$item->id])) {
+            DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$item->id, $l['qty']]);
+        }
+
+        return $added;
     }
 
     /* Adds ($delta > 0) or takes off ($delta < 0) quantity of a by-quantity item. Does nothing for items that are not counted in stock. */
@@ -85,6 +94,26 @@ class Purchases
             return;
         }
         DB::statement('INSERT INTO item_qty (item_id, qty) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)', [$itemId, $delta]);
+    }
+
+    /* Why one line cannot be taken off a purchase, or null when it can. */
+    public static function lineRemoveBlocker(object $l): ?string
+    {
+        $name = (string) DB::table('items')->where('id', $l->item_id)->value('name');
+        if ($l->barcoded) {
+            $codes = DB::table('devices')->where('purchase_line_id', $l->id)->pluck('code')->map(fn ($c) => (int) $c)->all();
+            if ($codes && (DB::table('devices')->whereIn('code', $codes)->where('status', '!=', 'in_stock')->exists() || Stock::movedCount($codes) > 0)) {
+                return '"' . $name . '" cannot be removed. Some of its barcoded pieces were already sold, rented, repaired or changed.';
+            }
+            return null;
+        }
+        if (!Stock::unstocked([(int) $l->item_id])) {
+            $have = (int) DB::table('item_qty')->where('item_id', $l->item_id)->value('qty');
+            if ($have < (int) $l->qty) {
+                return '"' . $name . '" cannot be removed. Only ' . $have . ' are left in stock but this line added ' . (int) $l->qty . ' (the rest were already sold or used).';
+            }
+        }
+        return null;
     }
 
     /* ---------- edit and delete ---------- */
@@ -165,6 +194,34 @@ class Purchases
             }
             $changes = [];
             $supplier = (string) DB::table('suppliers')->where('id', $d['supplier_id'])->value('name');
+
+            // Take lines off the purchase.
+            foreach (array_values(array_unique(array_map('intval', $d['remove'] ?? []))) as $lid) {
+                $l = DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.id', $lid)->where('l.purchase_id', $id)->first(['l.*', 'i.name']);
+                if (!$l) {
+                    continue;
+                }
+                if ($m = self::lineRemoveBlocker($l)) {
+                    throw new \RuntimeException($m);
+                }
+                if ($l->barcoded) {
+                    DB::table('devices')->where('purchase_line_id', $l->id)->delete();   // their history goes with them
+                } else {
+                    self::bumpQty((int) $l->item_id, -(int) $l->qty, 'the line "' . $l->name . '" was removed');
+                }
+                DB::table('purchase_lines')->where('id', $l->id)->delete();
+                unset($d['lines'][$l->id]);
+                $changes[] = 'removed line "' . $l->name . '" (qty ' . $l->qty . ')';
+            }
+
+            // Put new lines on the purchase.
+            foreach ($d['add'] ?? [] as $nl) {
+                self::makeLine($id, $nl, $d, $supplier, $userId);
+                $changes[] = 'added item ' . (string) DB::table('items')->where('id', $nl['item_id'])->value('name') . ' (qty ' . $nl['qty'] . ')';
+            }
+            if (!DB::table('purchase_lines')->where('purchase_id', $id)->exists()) {
+                throw new \RuntimeException('A purchase needs at least one item. To cancel the whole purchase, delete it instead.');
+            }
             foreach (DB::table('purchase_lines')->where('purchase_id', $id)->get() as $l) {
                 $new = $d['lines'][$l->id] ?? null;
                 if (!$new) {

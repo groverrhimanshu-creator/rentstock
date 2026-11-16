@@ -22,6 +22,32 @@ class Stock
     }
 
     /* Writes one line in the history of a piece and returns its id. */
+    /*
+     * Repaired items go back on the shelf: status "In repair" becomes "In stock". Pieces that are not in repair are left alone.
+     * Returns the number of pieces put back in stock.
+     */
+    public static function markRepaired(array $codes, string $note, ?int $userId): int
+    {
+        $codes = array_values(array_unique(array_filter(array_map('intval', $codes))));
+        if (!$codes) {
+            return 0;
+        }
+        return DB::transaction(function () use ($codes, $note, $userId) {
+            $ready = DB::table('devices')->whereIn('code', $codes)->where('status', 'repair')->lockForUpdate()->pluck('code')->map(fn ($c) => (int) $c)->all();
+            if (!$ready) {
+                return 0;
+            }
+            DB::table('devices')->whereIn('code', $ready)->update(['status' => 'in_stock', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
+            $now = now();
+            $text = 'Repaired, back in stock' . ($note !== '' ? ' · ' . $note : '');
+            foreach (array_chunk($ready, 500) as $chunk) {
+                DB::table('device_history')->insert(array_map(fn ($c) => ['code' => $c, 'at' => $now, 'text' => $text, 'user_id' => $userId], $chunk));
+            }
+            Audit::log('edit', 'repair', count($ready) === 1 ? Barcodes::text($ready[0]) : count($ready) . ' items', 'Back in stock' . ($note !== '' ? ': ' . $note : ''));
+            return count($ready);
+        });
+    }
+
     public static function addHistory(int $code, string $text, ?int $userId = null): int
     {
         return (int) DB::table('device_history')->insertGetId(['code' => $code, 'at' => now(), 'text' => $text, 'user_id' => $userId]);

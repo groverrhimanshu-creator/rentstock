@@ -320,3 +320,8 @@ STEP 34 - Purchase report details, brand tag box, bulk import
 
 STEP 35 - Import brands
 - Masters > Brand > "Import brands": choose a CSV or Excel file with Brand Name (and optionally Popular Name, Description), check the result, then import. Existing brands (case and spaces ignored) and repeats in the file are skipped; rows that are empty or too long are listed to fix. "Download sample file" included. Admin only. No migration.
+
+STEP 36 - Add / remove items on a saved purchase; repaired items back in stock
+- Edit purchase: "Add items to this purchase" (same fields as a new purchase, with brand tags) and a "Remove" tick on every line. A barcoded line can be removed only while all its pieces are in stock and untouched; a quantity line only if that much is still in stock. A purchase must keep at least one item.
+- Repaired items: Stock > Inventory > "In repair" tab: tick the repaired items and press "Repaired, put ticked items back in stock" (optional note); or open the item and use "Repaired, put back in stock". History and audit log record it. Admin and Sub-admin.
+No migration.  php artisan view:clear
