@@ -211,14 +211,14 @@ class StockController extends Controller
         $rows = DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')
             ->leftJoin('categories as c', 'c.id', '=', 'i.category_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')
             ->where('d.stock_entry_id', $id)->orderBy('i.name')->orderBy('d.code')
-            ->get(['d.code', 'i.name', 'b.name as brand', 'c.name as category', 'd.status']);
+            ->get(['d.code', 'i.name', 'b.name as brand', 'c.name as category', 'd.brand_tag', 'd.config', 'd.status']);
         return response()->streamDownload(function () use ($e, $rows, $prefix) {
             $h = fopen('php://output', 'w');
             fwrite($h, "\xEF\xBB\xBF");
             fputcsv($h, ['Stock entry', $e->id, 'Date', date('d/m/Y', strtotime($e->created_at)), 'Store', $e->store], ',', '"', '');
-            fputcsv($h, ['Barcode', 'Item', 'Brand', 'Category', 'Status now'], ',', '"', '');
+            fputcsv($h, ['Barcode', 'Item', 'Brand', 'Category', 'Brand tag / Service tag', 'Config', 'Status now'], ',', '"', '');
             foreach ($rows as $r) {
-                fputcsv($h, [$prefix . $r->code, $r->name, $r->brand, $r->category, \App\Support\Stock::STATUS[$r->status][0] ?? $r->status], ',', '"', '');
+                fputcsv($h, [$prefix . $r->code, $r->name, $r->brand, $r->category, $r->brand_tag, $r->config, \App\Support\Stock::STATUS[$r->status][0] ?? $r->status], ',', '"', '');
             }
             fclose($h);
         }, 'stock-entry-' . $e->id . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);

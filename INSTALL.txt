@@ -381,3 +381,5 @@ After changing .env on the server:  php artisan config:clear   (and  php artisan
 
 Create your own admin login (run on the server, it asks for the password):
   php artisan login:create admin aman "Aman Grover"
+
+STEP 39b - Stock entry download now has "Brand tag / Service tag" and "Config" columns (no migration).
