@@ -365,3 +365,19 @@ No migration. New file: public/assets/camscan.js (loaded with the mobile-app scr
   - The camera needs https (the live site has it). The first time, the browser asks for permission.
 
 After pull: php artisan optimize:clear, then Ctrl+F5 once.
+
+
+=====================================================================
+STEP 39 - MOBILE APP AND CAMERA SCAN FOR SELECTED LOGINS ONLY
+=====================================================================
+No migration. New: app/Support/Features.php. The mobile app (install button, bottom bar, Scan page, Scan menu item) and the camera scan
+buttons now follow these .env settings:
+
+  PWA_ENABLED=true            (default) the extras exist.   PWA_ENABLED=false   switched off for everybody.
+  PWA_USERS=aman              only these usernames (comma separated) see them. Everybody else sees the system exactly as before.
+                              Leave empty for everybody.
+
+After changing .env on the server:  php artisan config:clear   (and  php artisan optimize:clear)
+
+Create your own admin login (run on the server, it asks for the password):
+  php artisan login:create admin aman "Aman Grover"

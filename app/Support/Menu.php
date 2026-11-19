@@ -52,7 +52,7 @@ class Menu
             ['id' => 'profile', 'label' => 'Company Profile', 'icon' => 'building', 'url' => route('company.edit')],
         ];
 
-        if (config('rentstock.pwa')) {
+        if (Features::mobile()) {
             array_splice($menu, 3, 0, [['id' => 'scan', 'label' => 'Scan barcode', 'icon' => 'bars', 'url' => route('scan')]]);
         }
 

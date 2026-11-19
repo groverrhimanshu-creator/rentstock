@@ -6,6 +6,8 @@ return [
 
     // The mobile app (install on the phone, bottom bar, Scan page). Set PWA_ENABLED=false in .env to switch it off.
     'pwa' => (bool) env('PWA_ENABLED', true),
+    // Only these usernames get the mobile app and camera scan (comma separated, for example PWA_USERS=demo). Empty = everybody.
+    'pwa_users' => array_values(array_filter(array_map(fn ($x) => strtolower(trim($x)), explode(',', (string) env('PWA_USERS', ''))))),
 
     // The two-colour name shown in the sidebar and on the login screen .
     'brand' => ['Rental', 'Solutions'],

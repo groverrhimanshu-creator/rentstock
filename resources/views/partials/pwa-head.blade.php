@@ -1,4 +1,4 @@
-@if (config('rentstock.pwa'))
+@if (auth()->check() ? \App\Support\Features::mobile() : \App\Support\Features::mobileForAll())
 <link rel="manifest" href="{{ route('pwa.manifest') }}">
 <meta name="theme-color" content="#06063A">
 <meta name="mobile-web-app-capable" content="yes">

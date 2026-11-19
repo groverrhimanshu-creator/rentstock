@@ -12,11 +12,13 @@ class ScanController extends Controller
 {
     public function index()
     {
+        abort_unless(\App\Support\Features::mobile(), 404);
         return view('scan.index');
     }
 
     public function lookup(Request $request)
     {
+        abort_unless(\App\Support\Features::mobile(), 404);
         $code = Barcodes::parse((string) $request->input('code', ''));
         if (!$code) {
             return response()->json(['ok' => false, 'msg' => 'This is not a barcode of this system.']);

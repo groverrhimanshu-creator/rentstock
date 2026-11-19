@@ -1,4 +1,4 @@
-@if (config('rentstock.pwa') && auth()->user()->role !== 'customer')
+@if (\App\Support\Features::mobile() && auth()->user()->role !== 'customer')
 @php($c = \App\Support\Menu::current())
 <nav class="mbar noprint" aria-label="Quick menu">
     <a href="{{ route('dashboard') }}" class="{{ $c === 'dashboard' ? 'on' : '' }}">{!! \App\Support\Icons::get('grid') !!}<span>Home</span></a>

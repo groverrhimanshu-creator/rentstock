@@ -1,4 +1,4 @@
-@if (config('rentstock.pwa'))
+@if (auth()->check() ? \App\Support\Features::mobile() : \App\Support\Features::mobileForAll())
 <script src="{{ \App\Support\Assets::url('assets/pwa.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/camscan.js') }}" data-zxing="{{ \App\Support\Assets::url('assets/vendor/zxing.min.js') }}"></script>
 @endif
