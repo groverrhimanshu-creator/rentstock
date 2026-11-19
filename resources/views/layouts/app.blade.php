@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
 <link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/app.css') }}">
 <link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/theme.css') }}">
+@include('partials.pwa-head')
 </head>
 <body>
 @php
@@ -54,6 +55,7 @@
         </div>
     </div>
 </div>
+@include('partials.pwa-bar')
 @if (session('ok') || session('bad'))<div id="flash" hidden data-ok="{{ session('ok') }}" data-bad="{{ session('bad') }}"></div>@endif
 <script>
 (function () {
@@ -86,5 +88,6 @@
 <script src="{{ \App\Support\Assets::url('assets/vendor/sweetalert2.all.min.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/alerts.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/validate.js') }}"></script>
+@include('partials.pwa-foot')
 </body>
 </html>

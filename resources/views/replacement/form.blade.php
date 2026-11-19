@@ -10,8 +10,8 @@
         <div class="fg">
             <label class="f"><span>Type</span><select name="kind" id="kind">@foreach ($kinds as $k)<option @selected(old('kind', $kinds[0]) === $k)>{{ $k }}</option>@endforeach</select></label>
             <label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }}</option>@endforeach</select></label>
-            <label class="f"><span>Faulty item coming back</span><select name="old_code" id="old"><option value="">Select</option></select></label>
-            <label class="f"><span>Replace with</span><select name="new_code" id="new" disabled><option value="">Choose the faulty item first</option></select></label>
+            <label class="f"><span>Faulty item coming back</span><select name="old_code" id="old"><option value="">Select</option></select><button type="button" class="ab sm" style="margin-top:6px;align-self:flex-start" data-camscan-select="old" data-title="Scan the faulty item">Scan</button></label>
+            <label class="f"><span>Replace with</span><select name="new_code" id="new" disabled><option value="">Choose the faulty item first</option></select><button type="button" class="ab sm" style="margin-top:6px;align-self:flex-start" data-camscan-select="new" data-title="Scan the replacement item">Scan</button></label>
             <label class="f"><span>Item condition</span><select name="fault" id="fault" required><option value="">Select</option>@foreach (\App\Support\Moves::FAULTS as $x)<option @selected(old('fault') === $x)>{{ $x }}</option>@endforeach</select></label>
             @include('partials.dc-field')
             <label class="f"><span>Reason</span><input name="reason" id="reason" value="{{ old('reason') }}" maxlength="255" required placeholder="What is wrong with the item"></label>

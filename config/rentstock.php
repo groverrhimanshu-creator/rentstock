@@ -4,6 +4,9 @@ return [
     // Business time zone. Used for dates on invoices, history and reminders.
     'timezone' => env('RENTSTOCK_TIMEZONE', 'Asia/Kolkata'),
 
+    // The mobile app (install on the phone, bottom bar, Scan page). Set PWA_ENABLED=false in .env to switch it off.
+    'pwa' => (bool) env('PWA_ENABLED', true),
+
     // The two-colour name shown in the sidebar and on the login screen .
     'brand' => ['Rental', 'Solutions'],
 

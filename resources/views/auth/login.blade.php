@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
 <link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/app.css') }}">
 <link rel="stylesheet" href="{{ \App\Support\Assets::url('assets/theme.css') }}">
+@include('partials.pwa-head')
 </head>
 <body>
 @php($brand = config('rentstock.brand'))
@@ -41,5 +42,6 @@
     </div>
 </div>
 <script src="{{ \App\Support\Assets::url('assets/validate.js') }}"></script>
+@include('partials.pwa-foot')
 </body>
 </html>

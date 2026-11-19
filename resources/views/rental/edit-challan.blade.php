@@ -27,7 +27,7 @@
             </tbody>
         </table></div>
         <div class="f sugwrap" style="margin-top:14px"><span>Add items from stock (scan or type a barcode, or a name such as HP screen)</span>
-            <input id="addq" placeholder="{{ $prefix }}6000… or a name" autocomplete="off"><div id="sug"></div></div>
+            <input id="addq" data-camscan="Scan each item to add it to this challan" placeholder="{{ $prefix }}6000… or a name" autocomplete="off"><div id="sug"></div></div>
         <div class="tw" id="addbox" hidden style="margin-top:8px"><table class="t"><thead><tr><th>Barcode</th><th>Item</th><th>Rent / month</th><th></th></tr></thead><tbody id="addbody"></tbody></table></div>
         <div class="msg bad" id="clienterr" hidden></div>
         <div class="msg info">Ticked items go back into stock. Added items go out on this challan today. A new rent applies to rental invoices made after this. Invoices already made are not changed. An item that has come back, was replaced, or is already billed on a rental invoice cannot be taken off.</div>

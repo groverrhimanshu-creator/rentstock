@@ -11,7 +11,7 @@
     </div>
     <div class="cd" id="box" hidden>
         <h3>Items on rent (<span id="out-count">0</span>)</h3>
-        <div class="rowx" style="margin-bottom:10px"><input id="scan" class="ctl" placeholder="Scan returned barcode" style="flex:1;max-width:320px" autocomplete="off"><button type="button" class="ab" id="scanbtn">Tick</button><button type="button" class="ab sm" id="selall">Tick all</button><button type="button" class="ab sm" id="selnone">Clear</button></div>
+        <div class="rowx" style="margin-bottom:10px"><input id="scan" data-camscan="Scan each returned item" class="ctl" placeholder="Scan returned barcode" style="flex:1;max-width:320px" autocomplete="off"><button type="button" class="ab" id="scanbtn">Tick</button><button type="button" class="ab sm" id="selall">Tick all</button><button type="button" class="ab sm" id="selnone">Clear</button></div>
         <div class="tw" style="max-height:480px;overflow:auto"><table class="t"><thead><tr><th></th><th>Barcode</th><th>Item</th><th>Rented on</th><th>Reason</th><th>Condition</th><th>Notes</th></tr></thead><tbody id="rows"></tbody></table></div>
         <div class="msg info"><span id="n">0</span> selected. Good items go back to stock. Damaged/Faulty items go to repair, and they need a note.</div>
         <div class="rowx"><button class="ab solid">Save return</button></div>

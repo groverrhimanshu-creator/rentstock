@@ -325,3 +325,43 @@ STEP 36 - Add / remove items on a saved purchase; repaired items back in stock
 - Edit purchase: "Add items to this purchase" (same fields as a new purchase, with brand tags) and a "Remove" tick on every line. A barcoded line can be removed only while all its pieces are in stock and untouched; a quantity line only if that much is still in stock. A purchase must keep at least one item.
 - Repaired items: Stock > Inventory > "In repair" tab: tick the repaired items and press "Repaired, put ticked items back in stock" (optional note); or open the item and use "Repaired, put back in stock". History and audit log record it. Admin and Sub-admin.
 No migration.  php artisan view:clear
+
+
+=====================================================================
+STEP 37 - MOBILE APP (PWA) AND BARCODE SCAN PAGE
+=====================================================================
+No migration. Nothing KPI is testing is changed: the desktop screens look the same.
+
+New:
+  - Install on the phone: Android Chrome shows "Install app" (top bar) or menu > Add to Home screen.
+    iPhone: open in Safari > Share > Add to Home Screen. It then opens full screen with the logo as its icon.
+  - On phones: a bottom bar (Home, Stock, Scan, Rental, More), larger tap targets, wide tables scroll sideways.
+  - Scan barcode (menu and bottom bar, Admin/SubAdmin): camera scan, typed number, or a Bluetooth scanner.
+    Shows model, status, customer / challan, store, config, brand tag, and opens the item details. Read-only.
+  - Offline page if the internet drops. Pages and data are never stored on the phone.
+  - Needs HTTPS for the camera (the live site has it).
+  - Switch off completely with PWA_ENABLED=false in .env (then php artisan config:clear).
+
+Server after pull:
+  php artisan optimize:clear
+  sudo systemctl reload php8.4-fpm
+Then on the phone open https://rental.kpisolutions.in once, log in, and install.
+New files: public/sw.js, public/icons/*, public/assets/pwa.js, pwa.css, scan.js, vendor/zxing.min.js,
+           app/Http/Controllers/PwaController.php, ScanController.php, resources/views/scan, offline, partials/pwa-*.
+
+
+=====================================================================
+STEP 38 - CAMERA SCAN BUTTON ON SALE, RENTAL, RETURN, REPLACEMENT, EDIT CHALLAN
+=====================================================================
+No migration. New file: public/assets/camscan.js (loaded with the mobile-app scripts, so PWA_ENABLED=true is needed).
+
+  - New Sale, New Rental, Return, Edit rental challan: a "Camera" button next to the barcode box.
+    It opens the camera; every barcode read is put in the box and Enter is pressed for you, so the item is added exactly like a typed or
+    hand-scanned barcode (same checks: in stock, on rent with this customer, and so on). The camera stays open for the next item.
+    A green or red line in the scan window says what happened (for example "KPI600001 added", "... is not in the system").
+    Press Done (or Esc) to close.
+  - Replacement: a "Scan" button under "Faulty item coming back" and under "Replace with". The scanned barcode is picked in the list and the window closes.
+  - Works on the computer (webcam) and on the phone. A USB or Bluetooth hand scanner still works in the same boxes as before.
+  - The camera needs https (the live site has it). The first time, the browser asks for permission.
+
+After pull: php artisan optimize:clear, then Ctrl+F5 once.

@@ -27,6 +27,9 @@ Route::get('/', function () {
     return auth()->user()->role === 'customer' ? redirect()->route('portal') : redirect()->route('dashboard');
 });
 
+Route::get('/manifest.webmanifest', [\App\Http\Controllers\PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/offline', [\App\Http\Controllers\PwaController::class, 'offline'])->name('pwa.offline');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'show'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
@@ -38,6 +41,11 @@ Route::middleware(['auth', 'role'])->group(function () {
     Route::get('/page/{screen}', [PageController::class, 'show'])->name('page');
 
     Route::get('/dashboard', DashboardController::class)->middleware('role:admin,subadmin')->name('dashboard');
+
+    Route::middleware('role:admin,subadmin')->group(function () {
+        Route::get('/scan', [\App\Http\Controllers\ScanController::class, 'index'])->name('scan');
+        Route::post('/scan/lookup', [\App\Http\Controllers\ScanController::class, 'lookup'])->name('scan.lookup');
+    });
 
     Route::middleware('role:admin,subadmin')->prefix('stock')->group(function () {
         Route::get('/inventory', [StockController::class, 'inventory'])->name('stock.inventory');

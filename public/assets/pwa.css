@@ -1,0 +1,27 @@
+/* Mobile app (PWA) look. Only phones and the installed app are changed; the desktop screens stay as they are. */
+.mbar{display:none}
+#pwaoff{position:fixed;left:0;right:0;top:0;z-index:99;background:#B3261E;color:#fff;font:600 13px system-ui;text-align:center;padding:8px 12px}
+.scanbox{position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;max-width:520px}
+.scanbox video{display:block;width:100%;max-height:60vh;object-fit:cover}
+.scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:#F59E0B;box-shadow:0 0 8px #F59E0B;animation:scn 2s ease-in-out infinite alternate}
+@keyframes scn{from{top:30%}to{top:70%}}
+.sr{border:1px solid var(--a-line);border-radius:12px;padding:12px;margin:0 0 8px;display:block;color:inherit;text-decoration:none}
+.sr b{display:block;font-size:15px;color:var(--a-strong)}.sr small{display:block;color:var(--a-muted)}
+.sr.bad{background:var(--a-bad-soft);color:var(--a-bad)}
+@media (max-width:760px){
+  body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+  .app{min-height:100vh}
+  .tb{padding-top:max(0px,env(safe-area-inset-top))}
+  .ct{padding:10px 10px calc(78px + env(safe-area-inset-bottom))}
+  input,select,textarea{font-size:16px!important}
+  button,.ab,.btn,select,input:not([type=checkbox]):not([type=radio]){min-height:42px}
+  .cd table,.ct table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .cols{grid-template-columns:minmax(0,1fr)!important}
+  .sb{z-index:60}
+  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:#06063A;border-top:1px solid #25255A;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .mbar a,.mbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#9DAAD0;text-decoration:none;font:600 11px system-ui;background:none;border:0;min-height:48px;justify-content:center}
+  .mbar svg{width:22px;height:22px}
+  .mbar .on{color:#fff}.mbar .scanb{color:#fff}.mbar .scanb svg{background:#0090CF;border-radius:50%;padding:7px;width:38px;height:38px;margin-top:-16px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+  #pwainst{padding:6px 10px;min-height:34px}
+}
+@media (display-mode:standalone){body{user-select:none;-webkit-user-select:none}input,textarea{user-select:text;-webkit-user-select:text}}

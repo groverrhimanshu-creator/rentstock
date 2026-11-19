@@ -52,6 +52,10 @@ class Menu
             ['id' => 'profile', 'label' => 'Company Profile', 'icon' => 'building', 'url' => route('company.edit')],
         ];
 
+        if (config('rentstock.pwa')) {
+            array_splice($menu, 3, 0, [['id' => 'scan', 'label' => 'Scan barcode', 'icon' => 'bars', 'url' => route('scan')]]);
+        }
+
         if ($role === 'subadmin') {
             $menu = array_values(array_filter($menu, fn ($m) => !in_array($m['id'], ['masters', 'profile'], true)));
         }
@@ -82,6 +86,9 @@ class Menu
         }
         if (str_starts_with($name, 'company.')) {
             return 'profile';
+        }
+        if ($name === 'scan') {
+            return 'scan';
         }
         if (str_starts_with($name, 'purchase.')) {
             return 'purchase';
