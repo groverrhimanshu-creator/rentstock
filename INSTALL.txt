@@ -383,3 +383,16 @@ Create your own admin login (run on the server, it asks for the password):
   php artisan login:create admin aman "Aman Grover"
 
 STEP 39b - Stock entry download now has "Brand tag / Service tag" and "Config" columns (no migration).
+
+
+=====================================================================
+STEP 40 - REPORTS: BARCODE HISTORY TAB
+=====================================================================
+No migration. Reports has a new last tab "Barcode history".
+  - Type or scan a barcode (KPI600001 or 600001) or a brand / service tag. A tag that fits several pieces shows a list to choose from.
+  - Shows the piece (item, brand tag, config, status, who has it) and everything that happened to it, oldest first:
+    Purchase / Stock entry, Sale, Rental (given on challan, billed on rental invoice), Return, Replacement, Repair, Upgrade, Config edits.
+  - Click a line to open the document: purchase, sale, rental challan or invoice (return, replacement and upgrade open their list for that number / barcode).
+  - Filter buttons (All, Purchase, Sale ...) and Download CSV of the history.
+  - The search box has the camera button too.
+Files: app/Support/Reports.php (barcode), ReportController, resources/views/reports/barcode.blade.php, camscan.js (data-camscan-submit).

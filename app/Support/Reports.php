@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  */
 class Reports
 {
-    public const TABS = ['Stock summary', 'On rent by customer', 'Overdue returns', 'Sales register', 'Purchase report'];
+    public const TABS = ['Stock summary', 'On rent by customer', 'Overdue returns', 'Sales register', 'Purchase report', 'Barcode history'];
 
     public static function data(int $t, array $f = []): array
     {
@@ -41,6 +41,9 @@ class Reports
                 ->get(['s.no', 's.created_at', 's.taxable', 's.cgst', 's.sgst', 's.igst', 's.total', 'c.name as customer']);
             return ['name' => 'sales-register', 'cols' => [['Invoice', ''], ['Date', 'd'], ['Customer', ''], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm']],
                 'rows' => $rows->map(fn ($r) => [$r->no, substr((string) $r->created_at, 0, 10), $r->customer, (float) $r->taxable, Tax::r2((float) $r->cgst + (float) $r->sgst + (float) $r->igst), (float) $r->total])->all()];
+        }
+        if ($t === 5) {
+            return self::barcode($f);
         }
         return self::purchases($f);
     }
@@ -208,5 +211,121 @@ class Reports
             $lines[] = implode(',', $cells);
         }
         return "\xEF\xBB\xBF" . implode("\r\n", $lines);
+    }
+
+    /* ---------- Barcode history ---------- */
+
+    public const HIST_TYPES = ['Purchase', 'Stock entry', 'Sale', 'Rental', 'Return', 'Replacement', 'Repair', 'Upgrade', 'Config'];
+
+    /*
+     * Everything that has happened to one piece, oldest first, each line with the link to the document behind it.
+     * $f['q'] is a barcode (KPI600001 or 600001) or a brand / service tag. A tag that fits several pieces gives a list to choose from.
+     */
+    public static function barcode(array $f): array
+    {
+        $q = trim((string) ($f['q'] ?? ''));
+        $out = ['name' => 'barcode-history', 'q' => $q, 'device' => null, 'matches' => [], 'events' => [], 'log' => [], 'msg' => '',
+            'cols' => [['Date', 'd'], ['Type', ''], ['What happened', ''], ['Document', ''], ['Details', '']], 'rows' => []];
+        if ($q === '') {
+            return $out;
+        }
+        $prefix = Barcodes::prefix();
+        $base = fn () => DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->leftJoin('customers as c', 'c.id', '=', 'd.customer_id')
+            ->leftJoin('stores as st', 'st.id', '=', 'd.store_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->leftJoin('categories as ca', 'ca.id', '=', 'i.category_id')
+            ->select('d.code', 'd.status', 'd.brand_tag', 'd.config', 'd.rent_no', 'd.return_by', 'd.purchase_id', 'd.stock_entry_id', 'i.name as model', 'b.name as brand', 'ca.name as category', 'c.name as customer', 'st.name as store');
+        $dev = null;
+        $code = Barcodes::parse($q);
+        if ($code) {
+            $dev = $base()->where('d.code', $code)->first();
+        }
+        if (!$dev) {
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $m = $base()->where('d.brand_tag', 'like', $like)->orderBy('d.code')->limit(30)->get();
+            if ($m->count() === 1) {
+                $dev = $m->first();
+            } elseif ($m->count() > 1) {
+                $out['matches'] = $m->map(fn ($r) => ['code' => $r->code, 'bc' => $prefix . $r->code, 'model' => $r->model, 'tag' => (string) $r->brand_tag, 'status' => Stock::STATUS[$r->status][0] ?? $r->status])->all();
+                return $out;
+            }
+        }
+        if (!$dev) {
+            $out['msg'] = 'No piece found for "' . $q . '". Type a barcode such as ' . $prefix . '600001, or a brand / service tag.';
+            return $out;
+        }
+        $code = (int) $dev->code;
+        $bc = $prefix . $code;
+        $st = Stock::STATUS[$dev->status] ?? [$dev->status, 'idle'];
+        $out['device'] = ['code' => $code, 'bc' => $bc, 'model' => $dev->model, 'brand' => (string) $dev->brand, 'category' => (string) $dev->category, 'tag' => (string) $dev->brand_tag,
+            'config' => (string) $dev->config, 'status' => $st[0], 'tone' => $st[1], 'customer' => (string) $dev->customer, 'rent_no' => (string) $dev->rent_no, 'store' => (string) $dev->store,
+            'url' => route('stock.device', $code)];
+        $ev = [];
+        $add = function (string $type, $at, string $title, string $doc, string $detail, ?string $url) use (&$ev) {
+            $ev[] = ['at' => (string) $at, 'type' => $type, 'title' => $title, 'doc' => $doc, 'detail' => $detail, 'url' => $url];
+        };
+        $inr = fn ($v) => '₹' . number_format((float) $v, 2);
+
+        // Bought, or put in stock some other way
+        if ($dev->purchase_id) {
+            $p = DB::table('purchases as p')->leftJoin('suppliers as s', 's.id', '=', 'p.supplier_id')->where('p.id', $dev->purchase_id)->first(['p.id', 'p.inv_no', 'p.inv_date', 'p.created_at', 's.name as supplier']);
+            if ($p) {
+                $add('Purchase', $p->created_at, 'Bought from ' . $p->supplier, 'Purchase ' . ($p->inv_no !== '' ? $p->inv_no : '#' . $p->id), 'Supplier invoice date ' . ($p->inv_date ? Docs::d($p->inv_date) : '-'), route('purchase.show', $p->id));
+            }
+        } elseif ($dev->stock_entry_id) {
+            $e = DB::table('stock_entries')->where('id', $dev->stock_entry_id)->first(['id', 'created_at']);
+            if ($e) {
+                $add('Stock entry', $e->created_at, 'Added to stock', 'Stock entry ' . $e->id, '', route('stock.entries', ['q' => $e->id]));
+            }
+        }
+        // Sold
+        foreach (DB::table('sale_lines as l')->join('sales as s', 's.id', '=', 'l.sale_id')->leftJoin('customers as c', 'c.id', '=', 's.customer_id')->where('l.code', $code)
+            ->get(['s.id', 's.no', 's.created_at', 'l.price', 'c.name as customer']) as $r) {
+            $add('Sale', $r->created_at, 'Sold to ' . $r->customer, 'Invoice ' . $r->no, 'Price ' . $inr($r->price), route('sale.show', $r->id));
+        }
+        // On a rental challan or rental invoice
+        foreach (DB::table('rental_lines as l')->join('rentals as r', 'r.id', '=', 'l.rental_id')->leftJoin('customers as c', 'c.id', '=', 'r.customer_id')->where('l.code', $code)->orderBy('l.id')
+            ->get(['r.id', 'r.kind', 'r.no', 'r.created_at', 'r.period_from', 'r.period_to', 'l.rent', 'l.price', 'l.days', 'l.from_at', 'l.returned_at', 'l.return_id', 'l.close_replacement_id', 'c.name as customer']) as $r) {
+            if ($r->kind === 'challan') {
+                $add('Rental', $r->from_at ?: $r->created_at, 'Given on rent to ' . $r->customer, 'Challan ' . $r->no, 'Rent ' . $inr($r->rent) . ' per month', route('rental.show', $r->id));
+                if ($r->returned_at && !$r->return_id && !$r->close_replacement_id) {
+                    $add('Rental', $r->returned_at, 'Taken off the challan', 'Challan ' . $r->no, $r->customer, route('rental.show', $r->id));
+                }
+            } else {
+                $add('Rental', $r->created_at, 'Billed on a rental invoice', 'Invoice ' . $r->no, ($r->period_from ? Docs::d($r->period_from) . ' to ' . Docs::d($r->period_to) : '') . ($r->days ? ' · ' . $r->days . ' days' : '') . ' · ' . $inr($r->price) . ' · ' . $r->customer, route('rental.show', $r->id));
+            }
+        }
+        // Came back
+        foreach (DB::table('return_lines as l')->join('returns as r', 'r.id', '=', 'l.return_id')->leftJoin('customers as c', 'c.id', '=', 'r.customer_id')->where('l.code', $code)
+            ->get(['r.id', 'r.no', 'r.created_at', 'l.cond', 'l.reason', 'l.note', 'c.name as customer']) as $r) {
+            $add('Return', $r->created_at, 'Returned by ' . $r->customer, 'Return ' . $r->no, trim('Condition ' . $r->cond . ($r->reason !== '' ? ' · ' . $r->reason : '') . ($r->note !== '' ? ' · ' . $r->note : '')), route('return.index', ['q' => $r->no]));
+        }
+        // Swapped
+        foreach (DB::table('replacements as r')->leftJoin('customers as c', 'c.id', '=', 'r.customer_id')->where(fn ($w) => $w->where('r.old_code', $code)->orWhere('r.new_code', $code))
+            ->get(['r.id', 'r.kind', 'r.old_code', 'r.new_code', 'r.cn', 'r.fault', 'r.reason', 'r.created_at', 'c.name as customer']) as $r) {
+            $old = (int) $r->old_code === $code;
+            $add('Replacement', $r->created_at, $old ? 'Came back from ' . $r->customer . ', replaced by ' . $prefix . $r->new_code : 'Given to ' . $r->customer . ' in place of ' . $prefix . $r->old_code,
+                'Replacement' . ($r->cn ? ' · ' . $r->cn : ''), trim(($r->fault ?? '') . ($r->reason !== '' ? ' · ' . $r->reason : '')), route('replacement.index', ['q' => $bc]));
+        }
+        // Upgrades
+        foreach (DB::table('consumptions')->where('code', $code)->get(['id', 'part', 'from_val', 'to_val', 'used_name', 'created_at']) as $r) {
+            $add('Upgrade', $r->created_at, 'Upgraded ' . $r->part . ': ' . $r->from_val . ' to ' . $r->to_val, 'Upgrade assets', $r->used_name !== '' ? 'Used from stock: ' . $r->used_name : '', route('consumption.index', ['q' => $bc]));
+        }
+        // Configuration edits
+        foreach (DB::table('device_config_log')->where('code', $code)->whereNotIn('event', ['start', 'upgrade', 'upgrade_undo'])->get(['at', 'event', 'old_config', 'new_config', 'note']) as $r) {
+            $add('Config', $r->at, ConfigLog::EVENTS[$r->event] ?? $r->event, '', trim(($r->old_config ? $r->old_config . ' to ' : '') . $r->new_config . ($r->note !== '' ? ' · ' . $r->note : '')), route('stock.device', $code));
+        }
+        // The plain history lines; the ones about repair are also shown as their own events
+        $log = DB::table('device_history')->where('code', $code)->orderBy('at')->orderBy('id')->get(['at', 'text']);
+        foreach ($log as $r) {
+            if (stripos($r->text, 'repair') !== false) {
+                $add('Repair', $r->at, $r->text, '', '', route('stock.device', $code));
+            }
+        }
+        usort($ev, fn ($a, $b) => strcmp($a['at'], $b['at']));
+        $out['events'] = $ev;
+        $out['log'] = $log->map(fn ($r) => ['at' => (string) $r->at, 'text' => $r->text])->all();
+        $out['rows'] = array_map(fn ($e) => [substr($e['at'], 0, 10), $e['type'], $e['title'], $e['doc'], $e['detail']], $ev);
+        $out['name'] = 'barcode-history-' . $bc;
+        $out['empty'] = '';
+        return $out;
     }
 }

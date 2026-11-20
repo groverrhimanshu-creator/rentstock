@@ -19,6 +19,9 @@ class ReportController extends Controller
         $t = $this->tab($request);
         $n = Pager::size($request->query('n'));
         $data = Reports::data($t, $request->query());
+        if ($t === 5) {
+            return view('reports.barcode', ['tab' => $t, 'tabs' => Reports::TABS, 'data' => $data]);
+        }
         // Only one page of rows is drawn; "Download CSV" still has every row.
         $rows = Pager::ofArray($data['rows'], $n, $request);
         $first = ($rows->currentPage() - 1) * $n;   // position of the first drawn row, to find its id in $data['meta']

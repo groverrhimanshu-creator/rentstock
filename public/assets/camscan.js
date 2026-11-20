@@ -92,6 +92,13 @@
 
     /* An input: put the code in the box and press Enter, then see whether the page took it. */
     function viaInput(inp) {
+        if (inp.hasAttribute('data-camscan-submit')) {   // a search box: put the code in and submit its form
+            return function (code) {
+                inp.value = code;
+                setTimeout(function () { if (inp.form) { if (inp.form.requestSubmit) { inp.form.requestSubmit(); } else { inp.form.submit(); } } }, 400);
+                return { ok: true, close: true, msg: code + ' read' };
+            };
+        }
         var errBox = document.getElementById(inp.getAttribute('data-camscan-err') || 'clienterr');
         return function (code) {
             if (errBox) { errBox.hidden = true; errBox.textContent = ''; }
