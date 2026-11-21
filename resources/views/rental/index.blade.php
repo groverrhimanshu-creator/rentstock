@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Rental')
 @section('content')
-@php($admin = auth()->user()->role === 'admin')
-<div class="pg"><h2>Rental<small>Challans for items sent out. Rental invoices are made from Sale (choose Rental invoice).</small></h2><a class="ab" href="{{ route('rental.create') }}">+ New Challan</a></div>
+@php($admin = \App\Support\Perm::has('rental.edit|rental.delete|sale.edit|sale.delete'))
+<div class="pg"><h2>Rental<small>Challans for items sent out. Rental invoices are made from Sale (choose Rental invoice).</small></h2>@if (\App\Support\Perm::has('rental.create'))<a class="ab" href="{{ route('rental.create') }}">+ New Challan</a>@endif</div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw"><table class="t">
@@ -10,7 +10,7 @@
         <tbody>
             @forelse ($rows as $r)
                 <tr class="clk" data-href="{{ route('rental.show', $r->id) }}"><td>{{ $r->no }}</td><td>{{ $r->kind === 'invoice' ? 'Rental invoice' : 'Challan' }}</td><td>{{ \Carbon\Carbon::parse($r->created_at)->format('d/m/Y') }}</td><td>{{ $r->customer }}</td><td class="num">{{ $r->items }}</td><td class="num">{{ $r->kind === 'invoice' ? '-' : $r->still }}</td>
-                    @if ($admin)<td><div class="rowx" style="flex-wrap:nowrap"><a class="ab sm" href="{{ route('rental.edit', $r->id) }}">Edit</a>@include('partials.delete-btn', ['action' => route('rental.destroy', $r->id), 'what' => $r->kind === 'invoice' ? 'rental invoice' : 'challan', 'cls' => 'sm', 'confirm' => $r->kind === 'invoice' ? 'Delete rental invoice ' . $r->no . '? This cannot be undone.' : 'Delete challan ' . $r->no . '? Its items go back into stock. This cannot be undone.'])</div></td>@endif</tr>
+                    @if ($admin)<td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has($r->kind === 'invoice' ? 'sale.edit' : 'rental.edit'))<a class="ab sm" href="{{ route('rental.edit', $r->id) }}">Edit</a>@endif @if (\App\Support\Perm::has($r->kind === 'invoice' ? 'sale.delete' : 'rental.delete'))@include('partials.delete-btn', ['action' => route('rental.destroy', $r->id), 'what' => $r->kind === 'invoice' ? 'rental invoice' : 'challan', 'cls' => 'sm', 'confirm' => $r->kind === 'invoice' ? 'Delete rental invoice ' . $r->no . '? This cannot be undone.' : 'Delete challan ' . $r->no . '? Its items go back into stock. This cannot be undone.'])@endif</div></td>@endif</tr>
             @empty
                 <tr><td class="empty" colspan="{{ $admin ? 7 : 6 }}">Nothing to show</td></tr>
             @endforelse

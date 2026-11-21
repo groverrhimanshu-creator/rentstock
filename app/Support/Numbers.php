@@ -52,10 +52,17 @@ class Numbers
         return $p . self::pad(self::lowestFree('sale-' . $fy, [['sales', 'no'], ['rentals', 'no', ['kind', 'invoice']]], $p));
     }
 
-    /* Ch 2143 ... */
+    /* KPI/26-27/1: challans have their own series that starts again at 1 every financial year (April to March).
+       Challans made before this change keep their old "Ch 2150" numbers. */
     public static function challan(): string
     {
-        return 'Ch ' . self::lowestFree('challan', [['rentals', 'no', ['kind', 'challan']]], 'Ch ', 2143);
+        $fy = Tax::fy(now());
+        $p = Barcodes::prefix() . '/' . $fy . '/';
+        $n = self::lowestFree('challan-' . $fy, [['rentals', 'no', ['kind', 'challan']]], $p);
+        while (DB::table('rentals')->where('no', $p . $n)->exists()) {   // never the same text as an invoice number
+            $n++;
+        }
+        return $p . $n;
     }
 
     public static function returnNo(): string

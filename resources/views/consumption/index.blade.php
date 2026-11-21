@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Upgrade Assets')
 @section('content')
-@php($admin = auth()->user()->role === 'admin')
-<div class="pg"><h2>Upgrade Assets<small>RAM, SSD and part replacements. The device keeps its barcode and every change is logged with its date</small></h2><div class="rowx"><a class="ab" href="{{ route('consumption.export', ['q' => $q]) }}">Export log</a><a class="ab" href="{{ route('consumption.create') }}">+ New Upgrade</a></div></div>
+@php($admin = \App\Support\Perm::has('consumption.delete'))
+<div class="pg"><h2>Upgrade Assets<small>RAM, SSD and part replacements. The device keeps its barcode and every change is logged with its date</small></h2><div class="rowx"><a class="ab" href="{{ route('consumption.export', ['q' => $q]) }}">Export log</a>@if (\App\Support\Perm::has('consumption.create'))<a class="ab" href="{{ route('consumption.create') }}">+ New Upgrade</a>@endif</div></div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw"><table class="t">

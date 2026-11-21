@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $m['title'] . ' list')
 @section('content')
-<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><div class="rowx">@if ($key === 'item')<a class="ab" href="{{ route('items.export', ['q' => $q]) }}">Export list</a><a class="ab" href="{{ route('items.import') }}">Import items</a>@endif @if ($key === 'brand')<a class="ab" href="{{ route('brands.import') }}">Import brands</a>@endif<a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a></div></div>
+<div class="pg"><h2>{{ $m['title'] }} list<small>Masters</small></h2><div class="rowx">@if ($key === 'item')<a class="ab" href="{{ route('items.export', ['q' => $q]) }}">Export list</a>@if (\App\Support\Perm::has('masters.create'))<a class="ab" href="{{ route('items.import') }}">Import items</a>@endif @endif @if ($key === 'brand')@if (\App\Support\Perm::has('masters.create'))<a class="ab" href="{{ route('brands.import') }}">Import brands</a>@endif @endif @if (\App\Support\Perm::has('masters.create'))<a class="ab" href="{{ route('masters.create', $key) }}">+ Add {{ $m['title'] }}</a>@endif</div></div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw">
@@ -9,7 +9,7 @@
             <thead><tr>@foreach ($m['cols'] as $c)<th @if (in_array($c[2] ?? '', ['num', 'money'], true))class="num"@endif>{{ $c[1] }}</th>@endforeach<th></th></tr></thead>
             <tbody>
                 @forelse ($rows as $r)
-                    <tr class="clk" data-href="{{ route('masters.edit', [$key, $r->id]) }}">
+                    <tr class="clk" @if (\App\Support\Perm::has('masters.edit')) data-href="{{ route('masters.edit', [$key, $r->id]) }}" @endif>
                         @foreach ($m['cols'] as $c)
                             @php($v = $r->{$c[0]} ?? '')
                             @if (($c[2] ?? '') === 'money')
@@ -26,7 +26,7 @@
                                 <td>{{ trim((string) $v) }}</td>
                             @endif
                         @endforeach
-                        <td><div class="rowx" style="flex-wrap:nowrap"><a class="ab sm" href="{{ route('masters.edit', [$key, $r->id]) }}">Edit</a>@include('partials.delete-btn', ['action' => route('masters.destroy', [$key, $r->id]), 'what' => strtolower($m['title']), 'cls' => 'sm', 'blocked' => \App\Support\Deps::master($key, $r->id)])</div></td>
+                        <td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has('masters.edit'))<a class="ab sm" href="{{ route('masters.edit', [$key, $r->id]) }}">Edit</a>@endif @if (\App\Support\Perm::has('masters.delete'))@include('partials.delete-btn', ['action' => route('masters.destroy', [$key, $r->id])@endif, 'what' => strtolower($m['title']), 'cls' => 'sm', 'blocked' => \App\Support\Deps::master($key, $r->id)])</div></td>
                     </tr>
                 @empty
                     <tr><td class="empty" colspan="{{ count($m['cols']) + 1 }}">Nothing to show</td></tr>

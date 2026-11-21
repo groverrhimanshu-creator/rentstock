@@ -2,11 +2,13 @@
 @section('title', 'Purchase ' . $p->id)
 @section('content')
 <div class="pg"><h2>Purchase {{ $p->id }}</h2><div class="rowx">
-    @if (auth()->user()->role === 'admin')
+    @if (\App\Support\Perm::has('purchase.edit'))
         <a class="ab" href="{{ route('purchase.edit', $p->id) }}">Edit</a>
+    @endif
+    @if (\App\Support\Perm::has('purchase.delete'))
         @include('partials.delete-btn', ['action' => route('purchase.destroy', $p->id), 'what' => 'purchase', 'blocked' => $blocked, 'confirm' => 'Delete purchase ' . $p->id . '? Its barcoded items and quantities will be removed from stock. This cannot be undone.'])
     @endif
-    @if ($barcoded > 0)<a class="ab orange" href="{{ route('barcodes.purchase', $p->id) }}" target="_blank">Print barcodes</a>@endif
+    @if ($barcoded > 0 && \App\Support\Perm::has('barcodes.view'))<a class="ab orange" href="{{ route('barcodes.purchase', $p->id) }}" target="_blank">Print barcodes</a>@endif
     @if ($p->invoice_file)<a class="ab" href="{{ route('purchase.invoice', $p->id) }}" target="_blank">Supplier invoice</a>@endif
     <a class="ab" href="{{ route('purchase.index') }}">Back</a></div></div>
 <div class="msg ok">Stock updated: {{ $barcoded }} new barcoded items and {{ $qtyAdded }} quantity items added.</div>

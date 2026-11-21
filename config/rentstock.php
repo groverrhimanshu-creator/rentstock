@@ -12,8 +12,8 @@ return [
     // The two-colour name shown in the sidebar and on the login screen .
     'brand' => ['Rental', 'Solutions'],
 
-    // The SubAdmin role is switched off for now. Set SUBADMIN_ENABLED=true in .env (and run php artisan config:clear) to bring it back.
-    'subadmin_enabled' => (bool) env('SUBADMIN_ENABLED', false),
+    // SubAdmin logins are created and given their permissions on the Users page (Admin only). Set SUBADMIN_ENABLED=false in .env to switch every SubAdmin login off.
+    'subadmin_enabled' => (bool) env('SUBADMIN_ENABLED', true),
 
     // HSN / SAC code printed on every rent line (renting of IT equipment). Sold items keep the HSN of the item.
     'rent_sac' => env('RENT_SAC', '997315'),

@@ -14,20 +14,25 @@
 @endphp
 <div class="kp">
     @foreach ($cards as [$icon, $label, $value, $screen, $cls])
+        @php($need = str_starts_with($screen, 'inv:') ? 'stock.view' : ($screen === 'reports' ? 'reports.view' : $screen . '.view'))
+        @if (\App\Support\Perm::has($need))
         <a class="kc {{ $cls }}" href="{{ str_starts_with($screen, 'inv:') ? route('stock.inventory', array_filter(['status' => substr($screen, 4)])) : ($screen === 'reports' ? route('reports.index', ['tab' => 2]) : route($screen . '.index')) }}">{!! \App\Support\Icons::get($icon) !!}<span>{{ $label }}</span><b class="plain">{{ $value }}</b></a>
+        @else
+        <span class="kc {{ $cls }}">{!! \App\Support\Icons::get($icon) !!}<span>{{ $label }}</span><b class="plain">{{ $value }}</b></span>
+        @endif
     @endforeach
 </div>
 <div class="cols">
     <div class="cd"><h3>Returns due soon</h3>
         @forelse ($due as $d)
-            <p class="hint"><a class="bc" href="{{ route('stock.device', $d->code) }}">{{ $d->bc }}</a> · {{ $d->model }} · {{ $d->customer }} · due {{ \Carbon\Carbon::parse($d->return_by)->format('d/m/Y') }}</p>
+            <p class="hint">@if (\App\Support\Perm::has('stock.view'))<a class="bc" href="{{ route('stock.device', $d->code) }}">{{ $d->bc }}</a>@else<span class="bc">{{ $d->bc }}</span>@endif · {{ $d->model }} · {{ $d->customer }} · due {{ \Carbon\Carbon::parse($d->return_by)->format('d/m/Y') }}</p>
         @empty
             <p class="hint">Nothing due</p>
         @endforelse
     </div>
     <div class="cd"><h3>Latest rentals</h3>
         @forelse ($latest as $r)
-            <a class="lrow" href="{{ route('rental.show', $r->id) }}"><span class="l"><b>{{ $r->no }}</b> · {{ $r->customer }}<br><small>{{ \Carbon\Carbon::parse($r->created_at)->format('d/m/Y') }}</small></span><span class="pill info">{{ $r->items }} items</span></a>
+            <{{ \App\Support\Perm::has('rental.view|sale.view') ? 'a' : 'div' }} class="lrow" @if (\App\Support\Perm::has('rental.view|sale.view')) href="{{ route('rental.show', $r->id) }}" @endif><span class="l"><b>{{ $r->no }}</b> · {{ $r->customer }}<br><small>{{ \Carbon\Carbon::parse($r->created_at)->format('d/m/Y') }}</small></span><span class="pill info">{{ $r->items }} items</span></{{ \App\Support\Perm::has('rental.view|sale.view') ? 'a' : 'div' }}>
         @empty
             <p class="hint">Nothing yet</p>
         @endforelse

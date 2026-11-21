@@ -257,9 +257,13 @@ class Reports
         $st = Stock::STATUS[$dev->status] ?? [$dev->status, 'idle'];
         $out['device'] = ['code' => $code, 'bc' => $bc, 'model' => $dev->model, 'brand' => (string) $dev->brand, 'category' => (string) $dev->category, 'tag' => (string) $dev->brand_tag,
             'config' => (string) $dev->config, 'status' => $st[0], 'tone' => $st[1], 'customer' => (string) $dev->customer, 'rent_no' => (string) $dev->rent_no, 'store' => (string) $dev->store,
-            'url' => route('stock.device', $code)];
+            'url' => Perm::has('stock.view') ? route('stock.device', $code) : ''];
         $ev = [];
-        $add = function (string $type, $at, string $title, string $doc, string $detail, ?string $url) use (&$ev) {
+        $need = ['Purchase' => 'purchase.view', 'Stock entry' => 'stock.view', 'Sale' => 'sale.view', 'Rental' => 'rental.view|sale.view', 'Return' => 'return.view', 'Replacement' => 'replacement.view', 'Upgrade' => 'consumption.view', 'Config' => 'stock.view', 'Repair' => 'stock.view'];
+        $add = function (string $type, $at, string $title, string $doc, string $detail, ?string $url) use (&$ev, $need) {
+            if ($url !== null && !Perm::has($need[$type] ?? 'reports.view')) {
+                $url = null;   // the line stays, but it is not a link this login may open
+            }
             $ev[] = ['at' => (string) $at, 'type' => $type, 'title' => $title, 'doc' => $doc, 'detail' => $detail, 'url' => $url];
         };
         $inr = fn ($v) => '₹' . number_format((float) $v, 2);

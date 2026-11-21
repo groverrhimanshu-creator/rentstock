@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Return')
 @section('content')
-@php($admin = auth()->user()->role === 'admin')
-<div class="pg"><h2>Return<small>Scan items as they come back</small></h2><a class="ab" href="{{ route('return.create') }}">+ New Return</a></div>
+@php($admin = \App\Support\Perm::has('return.delete'))
+<div class="pg"><h2>Return<small>Scan items as they come back</small></h2>@if (\App\Support\Perm::has('return.create'))<a class="ab" href="{{ route('return.create') }}">+ New Return</a>@endif</div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw"><table class="t">

@@ -7,12 +7,15 @@
 @php
     $invoice = $r->kind === 'invoice';
     $mode = $r->tax_mode;
-    $admin = auth()->user()->role === 'admin' && !$mine;
+    $canEdit = !$mine && \App\Support\Perm::has($invoice ? 'sale.edit' : 'rental.edit');
+    $canDel = !$mine && \App\Support\Perm::has($invoice ? 'sale.delete' : 'rental.delete');
     $back = $mine ? route('myinv') : route('rental.index');
 @endphp
 <div class="pg"><h2>{{ $invoice ? 'Rental invoice ' : 'Challan ' }}{{ $r->no }}<small>{{ $r->cname }}</small></h2><div class="rowx"><button type="button" class="ab orange" onclick="window.print()">Print</button>
-    @if ($admin)
+    @if ($canEdit)
         <a class="ab" href="{{ route('rental.edit', $r->id) }}">Edit</a>
+    @endif
+    @if ($canDel)
         @include('partials.delete-btn', ['action' => route('rental.destroy', $r->id), 'what' => $invoice ? 'rental invoice' : 'challan', 'blocked' => $blocked, 'confirm' => $invoice ? 'Delete rental invoice ' . $r->no . '? This cannot be undone.' : 'Delete challan ' . $r->no . '? Its items go back into stock. This cannot be undone.'])
     @endif
     <a class="ab" href="{{ $back }}">Back</a></div></div>
@@ -53,7 +56,7 @@
 </div>
 @else
 <div class="paper">
-    @include('partials.paper-head', ['title' => 'DELIVERY CHALLAN', 'sub' => 'Ch No: ' . e(substr($r->no, 3)) . '<br>Date: ' . Docs::d($r->created_at)])
+    @include('partials.paper-head', ['title' => 'DELIVERY CHALLAN', 'sub' => 'Ch No: ' . e(str_starts_with($r->no, 'Ch ') ? substr($r->no, 3) : $r->no) . '<br>Date: ' . Docs::d($r->created_at)])
     <div class="three">
         @include('partials.party', ['h' => 'Delivered to', 'name' => $r->cname, 'address' => $r->address, 'city' => $r->city, 'state' => $r->state, 'code' => $r->state_code, 'gstin' => $r->gstin, 'phone' => $r->phone])
         <div><h5>Purpose</h5><p>Goods given on <b>rent</b>.<br>Not for sale. Ownership remains with {{ $company->name }}.</p></div>

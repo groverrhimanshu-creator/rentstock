@@ -6,8 +6,10 @@
     $title = $s->type === 'GST' ? 'TAX INVOICE' : 'INVOICE';
 @endphp
 <div class="pg"><h2>Invoice {{ $s->no }}</h2><div class="rowx"><button type="button" class="ab orange" onclick="window.print()">Print</button>
-    @if (auth()->user()->role === 'admin' && !$mine)
+    @if (!$mine && \App\Support\Perm::has('sale.edit'))
         <a class="ab" href="{{ route('sale.edit', $s->id) }}">Edit</a>
+    @endif
+    @if (!$mine && \App\Support\Perm::has('sale.delete'))
         @include('partials.delete-btn', ['action' => route('sale.destroy', $s->id), 'what' => 'invoice', 'blocked' => $blocked, 'confirm' => 'Delete invoice ' . $s->no . '? Its items go back into stock. This cannot be undone.'])
     @endif
     <a class="ab" href="{{ $mine ? route('myinv') : route('sale.index') }}">Back</a></div></div>

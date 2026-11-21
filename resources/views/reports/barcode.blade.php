@@ -49,7 +49,7 @@
                 @php($n = collect($data['events'])->where('type', $ty)->count())
                 @if ($n)<button type="button" class="ab sm" data-t="{{ $ty }}">{{ $ty }} ({{ $n }})</button>@endif
             @endforeach
-            <a class="ab sm" href="{{ $d['url'] }}">Open item page</a>
+            @if ($d['url'] !== '')<a class="ab sm" href="{{ $d['url'] }}">Open item page</a>@endif
         </div>
         <div class="tw"><table class="t" id="htab">
             <thead><tr><th>Date</th><th>Type</th><th>What happened</th><th>Document</th><th>Details</th></tr></thead>

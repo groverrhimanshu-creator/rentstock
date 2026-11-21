@@ -396,3 +396,26 @@ No migration. Reports has a new last tab "Barcode history".
   - Filter buttons (All, Purchase, Sale ...) and Download CSV of the history.
   - The search box has the camera button too.
 Files: app/Support/Reports.php (barcode), ReportController, resources/views/reports/barcode.blade.php, camscan.js (data-camscan-submit).
+
+
+=====================================================================
+STEP 41 - USERS & PERMISSIONS  +  CHALLAN NUMBER RESTARTS EVERY FINANCIAL YEAR
+=====================================================================
+Needs:  php artisan migrate --force      (adds users.permissions; also runs any pending earlier migrations)
+
+1) Users & Permissions (Admin only, left menu)
+   - Add User: name, login, password, role (Admin / SubAdmin), "Quick start" preset
+     (Usual, Read only, No masters, Full, None). Then the toggle page opens.
+   - ONE page, one toggle per action: View, Create, Import, Repair, Manage, Edit, Delete
+     for Purchase, Sale/Invoice, Rental/Challan, Return, Replacement, Consumption,
+     Stock, Barcodes, Payments, Reports, Masters.
+     Example: SubAdmin with Rental Create ON and Delete OFF can add a challan but never delete it.
+   - Turning any action on switches View on for that module. Row "All" toggle per module.
+   - Admin always has everything. Users, Customer logins and Company profile are Admin only.
+   - Menu items, buttons, dashboard cards and report links are hidden/plain when not permitted,
+     and the server refuses the URL (403) even if typed by hand.
+   - Existing SubAdmins keep their old rights ("Usual") until Admin edits them.
+   - SUBADMIN_ENABLED now defaults to true (set false in .env to hide the SubAdmin role again).
+
+2) Challan numbers: KPI/26-27/1, KPI/26-27/2 ...  restart at 1 every April 1.
+   Old numbers ("Ch 2150") stay as they are. Invoices stay KPI/26-27/001.

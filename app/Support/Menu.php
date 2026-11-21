@@ -4,7 +4,7 @@ namespace App\Support;
 
 /*
  * The sidebar, exactly as in the final prototype.
- * Admin sees everything. SubAdmin sees everything except Masters and Company Profile. Customer sees three screens.
+ * Admin sees everything. A SubAdmin sees only what the Admin switched on for that login (Users & Permissions). Customer sees three screens.
  * Every screen is built now. The placeholder page (route "page") is only a fallback.
  */
 class Menu
@@ -32,33 +32,52 @@ class Menu
         }
 
         $masters = [];
-        foreach (Masters::defs() as $key => $m) {
-            $masters[] = ['id' => 'master:' . $key, 'label' => $m['title'], 'url' => route('masters.index', $key)];
+        if (Perm::has('masters.view')) {
+            foreach (Masters::defs() as $key => $m) {
+                $masters[] = ['id' => 'master:' . $key, 'label' => $m['title'], 'url' => route('masters.index', $key)];
+            }
         }
-        $masters[] = ['id' => 'logins', 'label' => 'Customer Logins', 'url' => route('logins.index')];
+        if (Perm::isAdmin()) {
+            $masters[] = ['id' => 'logins', 'label' => 'Customer Logins', 'url' => route('logins.index')];
+        }
 
-        $menu = [
-            ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'grid', 'url' => route('dashboard')],
-            ['id' => 'masters', 'label' => 'Masters', 'icon' => 'layers', 'children' => $masters],
-            ['id' => 'stock', 'label' => 'Stock', 'icon' => 'box', 'children' => [
-                ['id' => 'inventory', 'label' => 'Inventory', 'url' => route('stock.inventory')],
-                ['id' => 'entries', 'label' => 'Stock Entries', 'url' => route('stock.entries')],
-                ['id' => 'import', 'label' => 'Import Stock', 'url' => route('stock.import')],
-            ]],
-            ['id' => 'purchase', 'label' => 'Purchase', 'icon' => 'cart', 'url' => route('purchase.index')],
-            ['id' => 'sale', 'label' => 'Sale', 'icon' => 'tag', 'url' => route('sale.index')],
-            $page('rental', 'rent'), $page('return', 'back'), $page('replacement', 'swap'),
-            $page('consumption', 'chip'), $page('barcodes', 'bars'), $page('payments', 'rupee'), $page('reports', 'chart'),
-            ['id' => 'profile', 'label' => 'Company Profile', 'icon' => 'building', 'url' => route('company.edit')],
-        ];
+        $stock = [];
+        if (Perm::has('stock.view')) {
+            $stock[] = ['id' => 'inventory', 'label' => 'Inventory', 'url' => route('stock.inventory')];
+            $stock[] = ['id' => 'entries', 'label' => 'Stock Entries', 'url' => route('stock.entries')];
+        }
+        if (Perm::has('stock.import')) {
+            $stock[] = ['id' => 'import', 'label' => 'Import Stock', 'url' => route('stock.import')];
+        }
 
-        if (Features::mobile()) {
+        // Each entry shows only when this login may open it.
+        $menu = [['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'grid', 'url' => route('dashboard')]];
+        if ($masters) {
+            $menu[] = ['id' => 'masters', 'label' => 'Masters', 'icon' => 'layers', 'children' => $masters];
+        }
+        if ($stock) {
+            $menu[] = ['id' => 'stock', 'label' => 'Stock', 'icon' => 'box', 'children' => $stock];
+        }
+        if (Perm::has('purchase.view')) {
+            $menu[] = ['id' => 'purchase', 'label' => 'Purchase', 'icon' => 'cart', 'url' => route('purchase.index')];
+        }
+        if (Perm::has('sale.view')) {
+            $menu[] = ['id' => 'sale', 'label' => 'Sale', 'icon' => 'tag', 'url' => route('sale.index')];
+        }
+        foreach ([['rental', 'rent'], ['return', 'back'], ['replacement', 'swap'], ['consumption', 'chip'], ['barcodes', 'bars'], ['payments', 'rupee'], ['reports', 'chart']] as [$slug, $icon]) {
+            if (Perm::has($slug . '.view')) {
+                $menu[] = $page($slug, $icon);
+            }
+        }
+        if (Perm::isAdmin()) {
+            $menu[] = ['id' => 'users', 'label' => 'Users & Permissions', 'icon' => 'layers', 'url' => route('users.index')];
+            $menu[] = ['id' => 'profile', 'label' => 'Company Profile', 'icon' => 'building', 'url' => route('company.edit')];
+        }
+
+        if (Features::mobile() && Perm::has('stock.view')) {
             array_splice($menu, 3, 0, [['id' => 'scan', 'label' => 'Scan barcode', 'icon' => 'bars', 'url' => route('scan')]]);
         }
 
-        if ($role === 'subadmin') {
-            $menu = array_values(array_filter($menu, fn ($m) => !in_array($m['id'], ['masters', 'profile'], true)));
-        }
         return $menu;
     }
 
@@ -80,6 +99,9 @@ class Menu
         }
         if (str_starts_with($name, 'masters.')) {
             return 'master:' . $r->parameter('key');
+        }
+        if (str_starts_with($name, 'users.')) {
+            return 'users';
         }
         if (str_starts_with($name, 'logins.')) {
             return 'logins';

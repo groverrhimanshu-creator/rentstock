@@ -14,14 +14,14 @@
         <div class="sr"><label class="f"><span>Search</span><input name="q" value="{{ $q }}" placeholder="Type to search" autocomplete="off"></label></div>
     </form>
     @php($prefix = \App\Support\Barcodes::prefix())
-    @if ($status === 'repair')
+    @if ($status === 'repair' && \App\Support\Perm::has('stock.repair'))
         <form id="repform" method="post" action="{{ route('stock.repaired') }}">@csrf</form>
         <div class="rowx" style="margin:8px 0;align-items:flex-end;flex-wrap:wrap"><label class="f" style="min-width:240px"><span>Note (optional)</span><input form="repform" name="note" maxlength="200" placeholder="for example: repaired and tested"></label>
             <button form="repform" class="ab solid" onclick="return confirm('Put the ticked items back in stock?')">Repaired, put ticked items back in stock</button>
             <button type="button" class="ab sm" onclick="document.querySelectorAll('input[name=\'codes[]\']').forEach(function(c){c.checked=true})">Tick all shown</button></div>
     @endif
     <div class="tw"><table class="t">
-        <thead><tr>@if ($status === 'repair')<th></th>@endif<th>Barcode</th><th>Model</th><th>Brand tag</th><th>Config</th><th>Status</th><th>With</th></tr></thead>
+        <thead><tr>@if ($status === 'repair' && \App\Support\Perm::has('stock.repair'))<th></th>@endif<th>Barcode</th><th>Model</th><th>Brand tag</th><th>Config</th><th>Status</th><th>With</th></tr></thead>
         <tbody>
             @forelse ($rows as $r)
                 <tr class="clk" data-href="{{ route('stock.device', $r->code) }}">

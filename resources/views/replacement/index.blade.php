@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Replacement')
 @section('content')
-@php($admin = auth()->user()->role === 'admin')
-<div class="pg"><h2>Replacement<small>Swap a faulty item for a working one</small></h2><a class="ab" href="{{ route('replacement.create') }}">+ New Replacement</a></div>
+@php($admin = \App\Support\Perm::has('replacement.delete'))
+<div class="pg"><h2>Replacement<small>Swap a faulty item for a working one</small></h2>@if (\App\Support\Perm::has('replacement.create'))<a class="ab" href="{{ route('replacement.create') }}">+ New Replacement</a>@endif</div>
 <div class="cd">
     @include('partials.list-controls')
     <div class="tw"><table class="t">
