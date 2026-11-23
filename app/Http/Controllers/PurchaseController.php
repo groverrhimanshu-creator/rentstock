@@ -204,6 +204,21 @@ class PurchaseController extends Controller
         return view('purchase.index', compact('rows', 'q', 'n'));
     }
 
+    /* The same supplier cannot have the same invoice number twice (a double click or a second upload of one bill). Returns a message, or null if fine. */
+    private function duplicateInvoice(int $supplierId, string $invNo, int $exceptId = 0): ?string
+    {
+        $invNo = trim($invNo);
+        if ($invNo === '') {
+            return null;
+        }
+        $q = DB::table('purchases')->where('supplier_id', $supplierId)->whereRaw('lower(trim(inv_no)) = ?', [mb_strtolower($invNo)]);
+        if ($exceptId) {
+            $q->where('id', '!=', $exceptId);
+        }
+        $hit = $q->first(['no']);
+        return $hit ? 'Supplier invoice ' . $invNo . ' of this supplier is already entered as purchase ' . $hit->no . '. The same bill cannot be added twice.' : null;
+    }
+
     public function create()
     {
         return view('purchase.form', [
@@ -223,6 +238,9 @@ class PurchaseController extends Controller
         $supplierId = (int) $request->input('supplier_id');
         if (!$supplierId || !DB::table('suppliers')->where('id', $supplierId)->exists()) {
             return $fail('Please choose a supplier.');
+        }
+        if ($dup = $this->duplicateInvoice($supplierId, (string) $request->input('inv_no', ''))) {
+            return $fail($dup);
         }
         $type = $request->input('type') === 'Bill of supply' ? 'Bill of supply' : 'GST';
         $pay = in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : 'Cash';
@@ -339,6 +357,9 @@ class PurchaseController extends Controller
         $supplierId = (int) $request->input('supplier_id');
         if (!$supplierId || !DB::table('suppliers')->where('id', $supplierId)->exists()) {
             return $fail('Please choose a supplier.');
+        }
+        if ($dup = $this->duplicateInvoice($supplierId, (string) $request->input('inv_no', ''), $id)) {
+            return $fail($dup);
         }
         $storeId = (int) $request->input('store_id');
         if (!DB::table('stores')->where('id', $storeId)->exists()) {

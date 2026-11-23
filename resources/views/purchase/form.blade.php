@@ -43,7 +43,7 @@
         <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span>GST</span><span id="t-tax">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
         <p class="hint" id="codesum" style="font-weight:600"></p>
         <div class="msg info">Brand tag: enter one for each piece of a "With barcode" row, separated by commas (for example ABC1234, ABC1235). When you save, one {{ \App\Support\Barcodes::prefix() }} barcode is made for every piece marked "With barcode". Rows marked "No barcode" only add to the stock count. The numbers shown above are the next ones in line; they are final once you press Save (if someone else saves a purchase first, you will see the final numbers on the purchase page).</div>
-        <div class="rowx"><button class="ab solid">Save purchase</button></div>
+        <div class="rowx"><button class="ab solid" id="savebtn">Save purchase</button></div>
     </div>
 </form>
 @php
@@ -56,5 +56,7 @@
     ];
 @endphp
 <script>window.PURCHASE = {!! json_encode($pdata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
+<script src="{{ \App\Support\Assets::url('assets/itemsearch.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/purchase.js') }}"></script>
+<script>document.getElementById('pf').addEventListener('submit', function (e) { var b = document.getElementById('savebtn'); if (b.dataset.sent) { e.preventDefault(); return; } setTimeout(function () { if (!e.defaultPrevented) { b.dataset.sent = 1; b.disabled = true; b.textContent = 'Saving...'; } }, 0); });</script>
 @endsection

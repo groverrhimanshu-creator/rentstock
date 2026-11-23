@@ -459,3 +459,15 @@ Sale and rental invoices: the total is rounded UP to the next whole rupee (1234.
 (on the invoice, and live on the New / Edit sale invoice form). Amount in words follows the rounded total. Payments and reminders use the rounded total.
 Invoices already saved keep their old total until they are edited and saved again.
 Purchase, sale invoice, rental invoice and challan pages now use the full width of the screen (was limited to a narrow page).
+
+
+STEP 41f - DUPLICATE PURCHASE BILL BLOCKED   (no migration)
+The same supplier cannot have the same supplier invoice number twice (new purchase and edit; case and spaces ignored; blank numbers allowed;
+another supplier may use the same number). The Save button locks after the first click so a double click cannot save twice.
+Purchases already saved twice: delete one, or change its invoice number, before editing it.
+
+
+STEP 41g - SEARCH BOX FOR THE ITEM LIST IN PURCHASE   (no migration)
+New purchase and Edit purchase: every Item drop-down has a "Search item / model" box above it. Type part of the name (several words allowed);
+the list narrows, "N found" shows, one match is picked automatically, Enter picks the first match.
+New file: public/assets/itemsearch.js
