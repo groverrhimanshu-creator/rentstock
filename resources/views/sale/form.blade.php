@@ -49,7 +49,7 @@
         <div class="msg" id="sel-empty">No items selected yet.</div>
         <div class="tw" id="sel-table" hidden><table class="t"><thead id="sel-head"><tr><th>Barcode</th><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody id="sel-body"></tbody></table></div>
         <div id="hidden"></div>
-        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div id="r-cg" hidden><span>CGST</span><span id="t-cg">0.00</span></div><div id="r-sg" hidden><span>SGST</span><span id="t-sg">0.00</span></div><div id="r-ig" hidden><span>IGST</span><span id="t-ig">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
+        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div id="r-cg" hidden><span>CGST</span><span id="t-cg">0.00</span></div><div id="r-sg" hidden><span>SGST</span><span id="t-sg">0.00</span></div><div id="r-ig" hidden><span>IGST</span><span id="t-ig">0.00</span></div><div id="r-ro"><span>Round off</span><span id="t-ro">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
         <div class="msg info" id="save-note">Saving removes these items from stock and creates the invoice in your format.</div>
         <div class="rowx"><button class="ab solid" id="save-btn">Save and create invoice</button></div>
     </div>

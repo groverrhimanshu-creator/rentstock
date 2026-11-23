@@ -73,7 +73,9 @@
         $('r-cg').hidden = $('r-sg').hidden = mode2 !== 'intra';
         $('r-ig').hidden = mode2 !== 'inter';
         $('t-taxable').textContent = money(taxable); $('t-cg').textContent = money(cg); $('t-sg').textContent = money(sg); $('t-ig').textContent = money(ig);
-        $('t-total').textContent = money(taxable + cg + sg + ig);
+        var exact = r2(taxable + cg + sg + ig), whole = Math.ceil(exact - 1e-9);   // rounded UP to the next whole rupee
+        $('t-ro').textContent = money(r2(whole - exact));
+        $('t-total').textContent = money(whole);
     }
 
     $('sel-body').addEventListener('input', function (e) {

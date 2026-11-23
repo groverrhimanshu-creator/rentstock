@@ -335,9 +335,9 @@ class Reports
 
         // Bought, or put in stock some other way
         if ($dev->purchase_id) {
-            $p = DB::table('purchases as p')->leftJoin('suppliers as s', 's.id', '=', 'p.supplier_id')->where('p.id', $dev->purchase_id)->first(['p.id', 'p.inv_no', 'p.inv_date', 'p.created_at', 's.name as supplier']);
+            $p = DB::table('purchases as p')->leftJoin('suppliers as s', 's.id', '=', 'p.supplier_id')->where('p.id', $dev->purchase_id)->first(['p.id', 'p.no', 'p.inv_no', 'p.inv_date', 'p.created_at', 's.name as supplier']);
             if ($p) {
-                $add('Purchase', $p->created_at, 'Bought from ' . $p->supplier, 'Purchase ' . ($p->inv_no !== '' ? $p->inv_no : '#' . $p->id), 'Supplier invoice date ' . ($p->inv_date ? Docs::d($p->inv_date) : '-'), route('purchase.show', $p->id));
+                $add('Purchase', $p->created_at, 'Bought from ' . $p->supplier, 'Purchase ' . ($p->inv_no !== '' ? $p->inv_no : '#' . $p->no), 'Supplier invoice date ' . ($p->inv_date ? Docs::d($p->inv_date) : '-'), route('purchase.show', $p->id));
             }
         } elseif ($dev->stock_entry_id) {
             $e = DB::table('stock_entries')->where('id', $dev->stock_entry_id)->first(['id', 'created_at']);

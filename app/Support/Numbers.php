@@ -39,6 +39,19 @@ class Numbers
         return $n;
     }
 
+    /* Purchase serial: 1, 2, 3 ... the lowest number not in use (the database row id is not shown to anyone). */
+    public static function purchase(): int
+    {
+        DB::table('counters')->insertOrIgnore(['name' => 'purchase-no', 'value' => 0]);
+        DB::table('counters')->where('name', 'purchase-no')->lockForUpdate()->value('value');
+        $used = array_flip(array_map('intval', DB::table('purchases')->whereNotNull('no')->pluck('no')->all()));
+        $n = 1;
+        while (isset($used[$n])) {
+            $n++;
+        }
+        return $n;
+    }
+
     private static function pad(int $n): string
     {
         return str_pad((string) $n, 3, '0', STR_PAD_LEFT);

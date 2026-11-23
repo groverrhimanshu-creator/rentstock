@@ -181,7 +181,7 @@ button.kc:hover{transform:translateY(-2px);border-color:var(--a-sky)}
 .lgf .demo b{display:block;font:700 10.5px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--a-muted);margin-bottom:8px}
 
 /* documents */
-.paper{background:#fff;color:#1b2340;border:1px solid var(--a-line);border-radius:14px;padding:30px 32px;max-width:880px;box-shadow:var(--a-shadow);overflow-x:auto;font-size:12.5px}
+.paper{background:#fff;color:#1b2340;border:1px solid var(--a-line);border-radius:14px;padding:30px 32px;width:100%;max-width:none;box-shadow:var(--a-shadow);overflow-x:auto;font-size:12.5px}
 .paper *{color:inherit}
 .paper .hd{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #0089C8}
 .paper .lg2{width:78px;height:78px;flex:none}

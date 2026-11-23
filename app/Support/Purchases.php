@@ -26,7 +26,7 @@ class Purchases
         return DB::transaction(function () use ($d, $userId) {
             $supplier = (string) DB::table('suppliers')->where('id', $d['supplier_id'])->value('name');
             $pid = DB::table('purchases')->insertGetId([
-                'supplier_id' => $d['supplier_id'], 'inv_no' => $d['inv_no'], 'inv_date' => $d['inv_date'] ?: null,
+                'no' => Numbers::purchase(), 'supplier_id' => $d['supplier_id'], 'inv_no' => $d['inv_no'], 'inv_date' => $d['inv_date'] ?: null,
                 'type' => $d['type'], 'pay_mode' => $d['pay_mode'], 'store_id' => $d['store_id'], 'user_id' => $userId, 'created_at' => now(),
             ]);
             $added = 0;
@@ -150,7 +150,7 @@ class Purchases
     public static function delete(int $id, ?int $userId): void
     {
         DB::transaction(function () use ($id) {
-            $p = DB::table('purchases as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')->where('p.id', $id)->lockForUpdate()->first(['p.id', 'p.inv_no', 's.name']);
+            $p = DB::table('purchases as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')->where('p.id', $id)->lockForUpdate()->first(['p.id', 'p.no', 'p.inv_no', 's.name']);
             if (!$p) {
                 throw new \RuntimeException('That purchase was not found.');
             }

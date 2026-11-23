@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Edit purchase')
 @section('content')
-<div class="pg"><h2>Edit purchase {{ $p->id }}<small>Items and quantities cannot be changed after saving</small></h2><a class="ab" href="{{ route('purchase.show', $p->id) }}">Back</a></div>
+<div class="pg"><h2>Edit purchase {{ $p->no }}<small>Items and quantities cannot be changed after saving</small></h2><a class="ab" href="{{ route('purchase.show', $p->id) }}">Back</a></div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 <form method="post" action="{{ route('purchase.update', $p->id) }}" autocomplete="off" enctype="multipart/form-data">
     @csrf @method('PUT')

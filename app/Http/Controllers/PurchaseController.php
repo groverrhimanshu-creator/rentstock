@@ -192,15 +192,15 @@ class PurchaseController extends Controller
         $n = \App\Support\Pager::size($request->query('n'));
         $q = trim((string) $request->query('q', ''));
         $query = DB::table('purchases as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
-            ->select('p.id', 'p.created_at', 'p.inv_no', 's.name as supplier')
+            ->select('p.id', 'p.no', 'p.created_at', 'p.inv_no', 's.name as supplier')
             ->selectRaw('(select coalesce(sum(qty), 0) from purchase_lines l where l.purchase_id = p.id) as items');
         if ($q !== '') {
             $like = '%' . $q . '%';
             $query->where(function ($w) use ($like) {
-                $w->whereRaw('cast(p.id as char) like ?', [$like])->orWhere('p.inv_no', 'like', $like)->orWhere('s.name', 'like', $like);
+                $w->whereRaw('cast(p.no as char) like ?', [$like])->orWhere('p.inv_no', 'like', $like)->orWhere('s.name', 'like', $like);
             });
         }
-        $rows = $query->orderByDesc('p.id')->paginate($n)->withQueryString();
+        $rows = $query->orderByDesc('p.no')->paginate($n)->withQueryString();
         return view('purchase.index', compact('rows', 'q', 'n'));
     }
 

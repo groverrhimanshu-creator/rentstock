@@ -34,7 +34,9 @@ class Tax
             }
         }
         [$taxable, $cg, $sg, $ig] = [self::r2($taxable), self::r2($cg), self::r2($sg), self::r2($ig)];
-        return ['taxable' => $taxable, 'cg' => $cg, 'sg' => $sg, 'ig' => $ig, 'tax' => self::r2($cg + $sg + $ig), 'total' => self::r2($taxable + $cg + $sg + $ig)];
+        $exact = self::r2($taxable + $cg + $sg + $ig);
+        $total = (float) ceil($exact - 1e-9);   // the invoice total is rounded UP to the next whole rupee
+        return ['taxable' => $taxable, 'cg' => $cg, 'sg' => $sg, 'ig' => $ig, 'tax' => self::r2($cg + $sg + $ig), 'round' => self::r2($total - $exact), 'total' => $total];
     }
 
     public static function money(float|int|string|null $n): string

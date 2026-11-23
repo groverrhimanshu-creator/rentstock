@@ -26,7 +26,7 @@
                                 <td>{{ trim((string) $v) }}</td>
                             @endif
                         @endforeach
-                        <td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has('masters.edit'))<a class="ab sm" href="{{ route('masters.edit', [$key, $r->id]) }}">Edit</a>@endif @if (\App\Support\Perm::has('masters.delete'))@include('partials.delete-btn', ['action' => route('masters.destroy', [$key, $r->id])@endif, 'what' => strtolower($m['title']), 'cls' => 'sm', 'blocked' => \App\Support\Deps::master($key, $r->id)])</div></td>
+                        <td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has('masters.edit'))<a class="ab sm" href="{{ route('masters.edit', [$key, $r->id]) }}">Edit</a>@endif @if (\App\Support\Perm::has('masters.delete'))@include('partials.delete-btn', ['action' => route('masters.destroy', [$key, $r->id]), 'what' => strtolower($m['title']), 'cls' => 'sm', 'blocked' => \App\Support\Deps::master($key, $r->id)])@endif</div></td>
                     </tr>
                 @empty
                     <tr><td class="empty" colspan="{{ count($m['cols']) + 1 }}">Nothing to show</td></tr>

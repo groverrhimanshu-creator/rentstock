@@ -38,6 +38,8 @@
             <div><span>Taxable value</span><span>{{ \App\Support\Tax::money($s->taxable) }}</span></div>
             @if ($mode === 'intra')<div><span>CGST</span><span>{{ \App\Support\Tax::money($s->cgst) }}</span></div><div><span>SGST</span><span>{{ \App\Support\Tax::money($s->sgst) }}</span></div>
             @elseif ($mode === 'inter')<div><span>IGST</span><span>{{ \App\Support\Tax::money($s->igst) }}</span></div>@endif
+            @php($ro = round((float) $s->total - ((float) $s->taxable + (float) $s->cgst + (float) $s->sgst + (float) $s->igst), 2))
+            @if (abs($ro) > 0.004)<div><span>Round off</span><span>{{ \App\Support\Tax::money($ro) }}</span></div>@endif
             <div><b>Total</b><b>{{ \App\Support\Tax::money($s->total) }}</b></div>
         </div>
     </div>

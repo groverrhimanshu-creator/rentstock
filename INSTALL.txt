@@ -442,3 +442,20 @@ Purchase > Edit: the item table now has GST % and Amount columns and a live Taxa
   (CGST+SGST or IGST by supplier state; none for Bill of supply). Removing a line or adding items updates the totals.
   Display only: the server still checks and works out everything on save.
 New file: public/assets/purchaseedit.js
+
+
+=====================================================================
+STEP 41d - PURCHASE NUMBER IS A PLAIN SERIAL (1, 2, 3 ...)
+=====================================================================
+Needs:  php artisan migrate --force      (adds purchases.no; numbers existing purchases 1, 2, 3 in the order made)
+The purchase list, Purchase page, Edit page, search and barcode history now show this serial, not the database row id.
+New purchases get the lowest free number (an empty table starts at 1). No need to reset the database counter.
+
+
+=====================================================================
+STEP 41e - INVOICE TOTAL ROUNDED UP  +  FULL-WIDTH DOCUMENT VIEW   (no migration)
+=====================================================================
+Sale and rental invoices: the total is rounded UP to the next whole rupee (1234.10 -> 1235.00) and a "Round off" line shows the difference
+(on the invoice, and live on the New / Edit sale invoice form). Amount in words follows the rounded total. Payments and reminders use the rounded total.
+Invoices already saved keep their old total until they are edited and saved again.
+Purchase, sale invoice, rental invoice and challan pages now use the full width of the screen (was limited to a narrow page).

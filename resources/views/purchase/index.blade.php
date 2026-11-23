@@ -9,8 +9,8 @@
         <thead><tr><th>No</th><th>Date</th><th>Supplier</th><th>Supplier inv</th><th class="num">Items added</th>@if ($rowact)<th></th>@endif</tr></thead>
         <tbody>
             @forelse ($rows as $r)
-                <tr class="clk" data-href="{{ route('purchase.show', $r->id) }}"><td>{{ $r->id }}</td><td>{{ \Carbon\Carbon::parse($r->created_at)->format('d/m/Y') }}</td><td>{{ $r->supplier }}</td><td>{{ $r->inv_no }}</td><td class="num">{{ $r->items }}</td>
-                    @if ($rowact)<td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has('purchase.edit'))<a class="ab sm" href="{{ route('purchase.edit', $r->id) }}">Edit</a>@endif @if (\App\Support\Perm::has('purchase.delete'))@include('partials.delete-btn', ['action' => route('purchase.destroy', $r->id), 'what' => 'purchase', 'cls' => 'sm', 'confirm' => 'Delete purchase ' . $r->id . '? Its barcoded items and quantities will be removed from stock. This cannot be undone.'])@endif</div></td>@endif</tr>
+                <tr class="clk" data-href="{{ route('purchase.show', $r->id) }}"><td>{{ $r->no }}</td><td>{{ \Carbon\Carbon::parse($r->created_at)->format('d/m/Y') }}</td><td>{{ $r->supplier }}</td><td>{{ $r->inv_no }}</td><td class="num">{{ $r->items }}</td>
+                    @if ($rowact)<td><div class="rowx" style="flex-wrap:nowrap">@if (\App\Support\Perm::has('purchase.edit'))<a class="ab sm" href="{{ route('purchase.edit', $r->id) }}">Edit</a>@endif @if (\App\Support\Perm::has('purchase.delete'))@include('partials.delete-btn', ['action' => route('purchase.destroy', $r->id), 'what' => 'purchase', 'cls' => 'sm', 'confirm' => 'Delete purchase ' . $r->no . '? Its barcoded items and quantities will be removed from stock. This cannot be undone.'])@endif</div></td>@endif</tr>
             @empty
                 <tr><td class="empty" colspan="{{ $rowact ? 6 : 5 }}">Nothing to show</td></tr>
             @endforelse

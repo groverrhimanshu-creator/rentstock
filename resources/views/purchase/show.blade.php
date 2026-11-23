@@ -1,19 +1,19 @@
 @extends('layouts.app')
-@section('title', 'Purchase ' . $p->id)
+@section('title', 'Purchase ' . $p->no)
 @section('content')
-<div class="pg"><h2>Purchase {{ $p->id }}</h2><div class="rowx">
+<div class="pg"><h2>Purchase {{ $p->no }}</h2><div class="rowx">
     @if (\App\Support\Perm::has('purchase.edit'))
         <a class="ab" href="{{ route('purchase.edit', $p->id) }}">Edit</a>
     @endif
     @if (\App\Support\Perm::has('purchase.delete'))
-        @include('partials.delete-btn', ['action' => route('purchase.destroy', $p->id), 'what' => 'purchase', 'blocked' => $blocked, 'confirm' => 'Delete purchase ' . $p->id . '? Its barcoded items and quantities will be removed from stock. This cannot be undone.'])
+        @include('partials.delete-btn', ['action' => route('purchase.destroy', $p->id), 'what' => 'purchase', 'blocked' => $blocked, 'confirm' => 'Delete purchase ' . $p->no . '? Its barcoded items and quantities will be removed from stock. This cannot be undone.'])
     @endif
     @if ($barcoded > 0 && \App\Support\Perm::has('barcodes.view'))<a class="ab orange" href="{{ route('barcodes.purchase', $p->id) }}" target="_blank">Print barcodes</a>@endif
     @if ($p->invoice_file)<a class="ab" href="{{ route('purchase.invoice', $p->id) }}" target="_blank">Supplier invoice</a>@endif
     <a class="ab" href="{{ route('purchase.index') }}">Back</a></div></div>
 <div class="msg ok">Stock updated: {{ $barcoded }} new barcoded items and {{ $qtyAdded }} quantity items added.</div>
 <div class="paper">
-    @include('partials.paper-head', ['title' => 'PURCHASE', 'sub' => 'No: ' . $p->id . '<br>Date: ' . \Carbon\Carbon::parse($p->created_at)->format('d/m/Y') . '<br>Supplier inv: ' . e($p->inv_no)])
+    @include('partials.paper-head', ['title' => 'PURCHASE', 'sub' => 'No: ' . $p->no . '<br>Date: ' . \Carbon\Carbon::parse($p->created_at)->format('d/m/Y') . '<br>Supplier inv: ' . e($p->inv_no)])
     <div class="three">
         @include('partials.party', ['h' => 'Supplier', 'name' => $p->sname, 'address' => $p->address, 'city' => $p->city, 'state' => $p->state, 'code' => $p->state_code, 'gstin' => $p->gstin, 'phone' => $p->phone])
         <div><h5>Store</h5><p>{{ $p->store }}</p></div>
