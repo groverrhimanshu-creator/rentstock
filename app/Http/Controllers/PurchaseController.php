@@ -322,10 +322,11 @@ class PurchaseController extends Controller
         return view('purchase.edit', [
             'p' => $p,
             'lines' => DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn']),
-            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked', 'hsn']),
+            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked', 'hsn', 'gst_percent']),
+            'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
             'why' => DB::table('purchase_lines')->where('purchase_id', $id)->get()->mapWithKeys(fn ($l) => [$l->id => Purchases::lineRemoveBlocker($l)])->all(),
             'codes' => DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id'])->groupBy('purchase_line_id'),
-            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name']),
+            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code']),
             'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']),
         ]);
     }

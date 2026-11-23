@@ -419,3 +419,26 @@ Needs:  php artisan migrate --force      (adds users.permissions; also runs any 
 
 2) Challan numbers: KPI/26-27/1, KPI/26-27/2 ...  restart at 1 every April 1.
    Old numbers ("Ch 2150") stay as they are. Invoices stay KPI/26-27/001.
+
+
+=====================================================================
+STEP 41b - STOCK CHECK BY NAME / MODEL   (no migration)
+=====================================================================
+Left menu > Stock > "Stock check". Type a name, model, brand, category or brand tag; the list narrows as you type.
+Per item: In stock / On rent / In repair / Sold (items kept by quantity show their quantity).
+"Only items in stock" tick hides items with nothing available. Click a model to see every piece
+(Inventory filtered to that model). Needs the "Stock > View" permission.
+Files: StockController (check, inventory item filter), resources/views/stock/check.blade.php, routes, Menu.
+
+
+=====================================================================
+STEP 41c - PURCHASE REPORT BY ITEM / CATEGORY  +  EDIT PURCHASE SHOWS GST LIKE NEW PURCHASE   (no migration)
+=====================================================================
+Reports > Purchase report: new filters Item and Category (next to Supplier) and "Show": Each purchase / Item-wise totals.
+  - Item or category filter: only purchases containing it are listed, and Qty / Taxable / GST / Total count only those lines.
+  - Item-wise totals: one row per item (purchases, qty, average rate, taxable, GST, total) for the dates chosen.
+  - "Download item details" and "Download CSV" follow the same filters.
+Purchase > Edit: the item table now has GST % and Amount columns and a live Taxable / GST / Total box
+  (CGST+SGST or IGST by supplier state; none for Bill of supply). Removing a line or adding items updates the totals.
+  Display only: the server still checks and works out everything on save.
+New file: public/assets/purchaseedit.js

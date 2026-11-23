@@ -36,6 +36,12 @@ class StockController extends Controller
         if ($status !== '') {
             $query->where('d.status', $status);
         }
+        $itemId = (int) $request->query('item', 0);
+        $itemName = '';
+        if ($itemId > 0) {
+            $query->where('d.item_id', $itemId);
+            $itemName = (string) DB::table('items')->where('id', $itemId)->value('name');
+        }
         if ($q !== '') {
             $like = '%' . $q . '%';
             $query->where(function ($w) use ($like) {
@@ -51,7 +57,40 @@ class StockController extends Controller
             ->leftJoin('categories as c', 'c.id', '=', 'i.category_id')
             ->select('i.name', 'c.name as category', 'q.qty')->orderBy('i.name')->get();
 
-        return view('stock.inventory', compact('rows', 'q', 'n', 'status', 'qtyRows'));
+        return view('stock.inventory', compact('rows', 'q', 'n', 'status', 'qtyRows', 'itemId', 'itemName'));
+    }
+
+    /* Stock check: type a name / model / brand / category and see how many are in stock, on rent, in repair and sold. */
+    public function check(Request $request)
+    {
+        [$q, $n] = $this->listSettings($request);
+        $onlyStock = $request->boolean('instock');
+        $query = DB::table('items as i')
+            ->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')
+            ->leftJoin('categories as c', 'c.id', '=', 'i.category_id')
+            ->leftJoin('item_qty as q', 'q.item_id', '=', 'i.id')
+            ->selectRaw("i.id, i.name, i.tracked, b.name as brand, c.name as category,
+                coalesce(q.qty, 0) as qty,
+                (select count(*) from devices d where d.item_id = i.id and d.status = 'in_stock') as n_in,
+                (select count(*) from devices d where d.item_id = i.id and d.status = 'rented') as n_rent,
+                (select count(*) from devices d where d.item_id = i.id and d.status = 'repair') as n_rep,
+                (select count(*) from devices d where d.item_id = i.id and d.status = 'sold') as n_sold");
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('i.name', 'like', $like)->orWhere('b.name', 'like', $like)->orWhere('c.name', 'like', $like)
+                    ->orWhereExists(function ($x) use ($like) {
+                        $x->select(DB::raw(1))->from('devices as d')->whereColumn('d.item_id', 'i.id')
+                            ->where(function ($y) use ($like) { $y->where('d.brand_tag', 'like', $like)->orWhere('d.config', 'like', $like); });
+                    });
+            });
+        }
+        if ($onlyStock) {
+            $query->whereRaw("(case when i.tracked = 1 then (select count(*) from devices d where d.item_id = i.id and d.status = 'in_stock') else coalesce(q.qty, 0) end) > 0");
+        }
+        $rows = $query->orderBy('i.name')->paginate($n)->withQueryString();
+
+        return view('stock.check', compact('rows', 'q', 'n', 'onlyStock'));
     }
 
     public function device(int $code)

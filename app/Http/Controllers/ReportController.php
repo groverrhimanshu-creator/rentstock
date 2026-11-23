@@ -74,7 +74,7 @@ class ReportController extends Controller
     public function purchaseLinesCsv(Request $request)
     {
         $one = (int) $request->query('id');   // one purchase (from its pop-up) or every purchase of the report
-        $lines = Reports::purchaseLines($one ? [$one] : Reports::purchaseIds($request->query()));
+        $lines = Reports::purchaseLines($one ? [$one] : Reports::purchaseIds($request->query()), $one ? [] : $request->query());
         return response()->streamDownload(function () use ($lines) {
             $h = fopen('php://output', 'w');
             fwrite($h, "\xEF\xBB\xBF");

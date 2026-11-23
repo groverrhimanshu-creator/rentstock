@@ -3,13 +3,14 @@
 @section('content')
 <div class="pg"><h2>Inventory<small>Every barcoded item and its status</small></h2></div>
 <div class="cd">
+    @if ($itemId > 0)<p class="hint">Showing only <b>{{ $itemName }}</b>. <a href="{{ route('stock.inventory') }}">Show all models</a> · <a href="{{ route('stock.check') }}">Back to stock check</a></p>@endif
     <div class="tabsx">
         @foreach (['' => 'All', 'in_stock' => 'In stock', 'rented' => 'On rent', 'repair' => 'In repair', 'sold' => 'Sold'] as $k => $label)
-            <a href="{{ route('stock.inventory', array_filter(['status' => $k, 'n' => $n, 'q' => $q])) }}" aria-selected="{{ $status === $k ? 'true' : 'false' }}">{{ $label }}</a>
+            <a href="{{ route('stock.inventory', array_filter(['status' => $k, 'n' => $n, 'q' => $q, 'item' => $itemId])) }}" aria-selected="{{ $status === $k ? 'true' : 'false' }}">{{ $label }}</a>
         @endforeach
     </div>
     <form data-list method="get" action="{{ route('stock.inventory') }}" class="lt">
-        <input type="hidden" name="status" value="{{ $status }}">
+        <input type="hidden" name="status" value="{{ $status }}">@if ($itemId > 0)<input type="hidden" name="item" value="{{ $itemId }}">@endif
         <label class="f"><span>Show</span><select name="n">@foreach (\App\Support\Pager::SIZES as $o)<option value="{{ $o }}" @selected($n === $o)>{{ $o }}</option>@endforeach</select></label>
         <div class="sr"><label class="f"><span>Search</span><input name="q" value="{{ $q }}" placeholder="Type to search" autocomplete="off"></label></div>
     </form>

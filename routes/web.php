@@ -55,6 +55,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::prefix('stock')->group(function () {
             Route::middleware('perm:stock.view')->group(function () {
                 Route::get('/inventory', [StockController::class, 'inventory'])->name('stock.inventory');
+                Route::get('/check', [StockController::class, 'check'])->name('stock.check');
                 Route::get('/device/{code}', [StockController::class, 'device'])->whereNumber('code')->name('stock.device');
                 Route::get('/entries', [StockController::class, 'entries'])->name('stock.entries');
                 Route::get('/entries/{id}/export', [StockController::class, 'entryExport'])->whereNumber('id')->name('stock.entry.export');

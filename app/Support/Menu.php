@@ -43,6 +43,7 @@ class Menu
 
         $stock = [];
         if (Perm::has('stock.view')) {
+            $stock[] = ['id' => 'check', 'label' => 'Stock check', 'url' => route('stock.check')];
             $stock[] = ['id' => 'inventory', 'label' => 'Inventory', 'url' => route('stock.inventory')];
             $stock[] = ['id' => 'entries', 'label' => 'Stock Entries', 'url' => route('stock.entries')];
         }
@@ -117,6 +118,9 @@ class Menu
         }
         if (str_starts_with($name, 'sale.')) {
             return 'sale';
+        }
+        if ($name === 'stock.check') {
+            return 'check';
         }
         if (str_starts_with($name, 'stock.device') || $name === 'stock.inventory') {
             return 'inventory';

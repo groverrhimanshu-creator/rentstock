@@ -33,6 +33,15 @@
                 <label class="f"><span>Supplier</span>
                     <select name="supplier"><option value="">All suppliers</option>@foreach ($data['suppliers'] as $s)<option value="{{ $s->id }}" @selected((string) $f['supplier'] === (string) $s->id)>{{ $s->name }}</option>@endforeach</select>
                 </label>
+                <label class="f"><span>Item</span>
+                    <select name="item"><option value="">All items</option>@foreach ($data['items'] as $it)<option value="{{ $it->id }}" @selected((string) $f['item'] === (string) $it->id)>{{ $it->name }}</option>@endforeach</select>
+                </label>
+                <label class="f"><span>Category</span>
+                    <select name="category"><option value="">All categories</option>@foreach ($data['categories'] as $ct)<option value="{{ $ct->id }}" @selected((string) $f['category'] === (string) $ct->id)>{{ $ct->name }}</option>@endforeach</select>
+                </label>
+                <label class="f"><span>Show</span>
+                    <select name="by"><option value="bill" @selected($f['by'] === 'bill')>Each purchase</option><option value="item" @selected($f['by'] === 'item')>Item-wise totals</option></select>
+                </label>
                 <button class="ab sm solid">Show</button>
                 <a class="ab sm" href="{{ route('reports.index', ['tab' => 4]) }}">Last month</a>
             @endif
