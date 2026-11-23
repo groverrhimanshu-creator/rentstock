@@ -467,7 +467,20 @@ another supplier may use the same number). The Save button locks after the first
 Purchases already saved twice: delete one, or change its invoice number, before editing it.
 
 
-STEP 41g - SEARCH BOX FOR THE ITEM LIST IN PURCHASE   (no migration)
-New purchase and Edit purchase: every Item drop-down has a "Search item / model" box above it. Type part of the name (several words allowed);
-the list narrows, "N found" shows, one match is picked automatically, Enter picks the first match.
-New file: public/assets/itemsearch.js
+STEP 41g - SEARCH BARS INSTEAD OF DROP-DOWNS IN PURCHASE   (no migration)
+New purchase and Edit purchase: the Item field (every row) and, in "New item", the Category and Brand fields are search bars.
+Type part of a name / model; Item also matches the category and brand (typing "laptop" lists every laptop). Each result shows its category and brand.
+Arrow keys + Enter, or click, to pick; Esc closes; clearing the box clears the choice. Saving, totals and bulk import work as before.
+Files: public/assets/itemsearch.js (replaces the earlier version), PurchaseController (items carry category / brand), purchase form and edit views.
+
+
+STEP 41h - SALES REGISTER FILTERS   (no migration)
+Reports > Sales register now has: From / To (invoice date, default last month like the other tabs), Customer (list of customers),
+Item, Category, Show (Each invoice / Item-wise totals) and Search (invoice no or customer). Summary boxes show invoices, taxable, GST and total.
+With an item or category chosen, the amounts are those of the matching lines only. Download CSV follows the filters.
+New column: Products (what was sold on the invoice).
+
+
+STEP 41i - ITEM / CATEGORY ARE SEARCH BOXES IN PURCHASE REPORT AND SALES REGISTER   (no migration)
+Reports > Purchase report and Sales register: Item and Category are now type-to-search boxes (suggestions appear as you type, any part of the name works),
+press Enter (or Show) to filter the list. Leave empty for all.

@@ -27,18 +27,28 @@
                 <label class="f"><span>Search by customer name</span><input type="search" name="q" value="{{ $f['q'] }}" placeholder="Type a name" maxlength="100"></label>
                 <button class="ab sm">Search</button>
                 <button class="ab sm solid">Show</button><a class="ab sm" href="{{ route('reports.index', ['tab' => 1]) }}">Last month</a>
+            @elseif ($tab === 3)
+                <label class="f"><span>From</span><input type="date" name="from" value="{{ $f['from'] }}"></label>
+                <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
+                <label class="f"><span>Customer</span>
+                    <select name="customer"><option value="">All customers</option>@foreach ($data['customers'] as $cu)<option value="{{ $cu->id }}" @selected((string) $f['customer'] === (string) $cu->id)>{{ $cu->name }}</option>@endforeach</select>
+                </label>
+                <label class="f"><span>Item</span><input type="search" name="item" value="{{ $f['item'] }}" list="dl-items" placeholder="Search item, press Enter" maxlength="100" autocomplete="off"></label>
+                <label class="f"><span>Category</span><input type="search" name="category" value="{{ $f['category'] }}" list="dl-cats" placeholder="Search category, press Enter" maxlength="100" autocomplete="off"></label>
+                <label class="f"><span>Show</span>
+                    <select name="by"><option value="bill" @selected($f['by'] === 'bill')>Each invoice</option><option value="item" @selected($f['by'] === 'item')>Item-wise totals</option></select>
+                </label>
+                <label class="f"><span>Search invoice / customer</span><input type="search" name="q" value="{{ $f['q'] }}" placeholder="Type to search" maxlength="100"></label>
+                <button class="ab sm solid">Show</button>
+                <a class="ab sm" href="{{ route('reports.index', ['tab' => 3]) }}">Last month</a>
             @elseif ($tab === 4)
                 <label class="f"><span>From</span><input type="date" name="from" value="{{ $f['from'] }}"></label>
                 <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
                 <label class="f"><span>Supplier</span>
                     <select name="supplier"><option value="">All suppliers</option>@foreach ($data['suppliers'] as $s)<option value="{{ $s->id }}" @selected((string) $f['supplier'] === (string) $s->id)>{{ $s->name }}</option>@endforeach</select>
                 </label>
-                <label class="f"><span>Item</span>
-                    <select name="item"><option value="">All items</option>@foreach ($data['items'] as $it)<option value="{{ $it->id }}" @selected((string) $f['item'] === (string) $it->id)>{{ $it->name }}</option>@endforeach</select>
-                </label>
-                <label class="f"><span>Category</span>
-                    <select name="category"><option value="">All categories</option>@foreach ($data['categories'] as $ct)<option value="{{ $ct->id }}" @selected((string) $f['category'] === (string) $ct->id)>{{ $ct->name }}</option>@endforeach</select>
-                </label>
+                <label class="f"><span>Item</span><input type="search" name="item" value="{{ $f['item'] }}" list="dl-items" placeholder="Search item, press Enter" maxlength="100" autocomplete="off"></label>
+                <label class="f"><span>Category</span><input type="search" name="category" value="{{ $f['category'] }}" list="dl-cats" placeholder="Search category, press Enter" maxlength="100" autocomplete="off"></label>
                 <label class="f"><span>Show</span>
                     <select name="by"><option value="bill" @selected($f['by'] === 'bill')>Each purchase</option><option value="item" @selected($f['by'] === 'item')>Item-wise totals</option></select>
                 </label>
@@ -47,6 +57,8 @@
             @endif
             <label class="f"><span>Rows per page</span><select name="n" onchange="this.form.submit()">@foreach (\App\Support\Pager::SIZES as $o)<option value="{{ $o }}" @selected($n === $o)>{{ $o }}</option>@endforeach</select></label>
         </form>
+        @if (!empty($data['items']))<datalist id="dl-items">@foreach ($data['items'] as $it)<option value="{{ $it->name }}">@endforeach</datalist>@endif
+        @if (!empty($data['categories']))<datalist id="dl-cats">@foreach ($data['categories'] as $ct)<option value="{{ $ct->name }}">@endforeach</datalist>@endif
         @if (!empty($data['summary']))
             <div class="sumb" style="margin:10px 0">@foreach ($data['summary'] as $x)<div><span>{{ $x[0] }}</span><b>{{ $x[1] }}</b></div>@endforeach</div>
         @endif

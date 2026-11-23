@@ -37,10 +37,7 @@ class Reports
                 'rows' => $rows->map(fn ($r) => [$prefix . $r->code, $r->model, (string) $r->customer, $r->return_by])->all(), 'empty' => 'Nothing overdue.'];
         }
         if ($t === 3) {
-            $rows = DB::table('sales as s')->join('customers as c', 'c.id', '=', 's.customer_id')->orderBy('s.id')
-                ->get(['s.no', 's.created_at', 's.taxable', 's.cgst', 's.sgst', 's.igst', 's.total', 'c.name as customer']);
-            return ['name' => 'sales-register', 'cols' => [['Invoice', ''], ['Date', 'd'], ['Customer', ''], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm']],
-                'rows' => $rows->map(fn ($r) => [$r->no, substr((string) $r->created_at, 0, 10), $r->customer, (float) $r->taxable, Tax::r2((float) $r->cgst + (float) $r->sgst + (float) $r->igst), (float) $r->total])->all()];
+            return self::sales($f);
         }
         if ($t === 5) {
             return self::barcode($f);
@@ -112,6 +109,95 @@ class Reports
         return [$name, $out];
     }
 
+    /* ---------- Sales register ---------- */
+
+    private static function salesQuery(array $f)
+    {
+        [$from, $to] = self::monthRange($f);
+        $q = DB::table('sales as s')->join('customers as c', 'c.id', '=', 's.customer_id')->whereRaw('date(s.created_at) between ? and ?', [$from, $to]);
+        if (!empty($f['customer'])) {
+            $q->where('s.customer_id', (int) $f['customer']);
+        }
+        $term = trim((string) ($f['q'] ?? ''));
+        if ($term !== '') {
+            $like = '%' . $term . '%';
+            $q->where(function ($w) use ($like) {
+                $w->where('s.no', 'like', $like)->orWhere('c.name', 'like', $like);
+            });
+        }
+        [$cond, $b] = self::lineFilter($f, 'lx');
+        if ($cond !== '') {
+            $q->whereRaw('exists (select 1 from sale_lines lx where lx.sale_id = s.id' . $cond . ')', $b);
+        }
+        return $q;
+    }
+
+    private static function salesFilters(array $f, string $from, string $to): array
+    {
+        return ['from' => $from, 'to' => $to, 'customer' => !empty($f['customer']) ? (int) $f['customer'] : '',
+            'item' => trim((string) ($f['item'] ?? '')), 'category' => trim((string) ($f['category'] ?? '')),
+            'q' => trim((string) ($f['q'] ?? '')), 'by' => (($f['by'] ?? '') === 'item') ? 'item' : 'bill'];
+    }
+
+    /* One row per sale invoice, or (by=item) one row per item. Dates are the invoice dates; the default is last month, like the other reports. */
+    private static function sales(array $f): array
+    {
+        [$from, $to] = self::monthRange($f);
+        $common = ['customers' => DB::table('customers')->orderBy('name')->get(['id', 'name']),
+            'items' => DB::table('items')->orderBy('name')->get(['id', 'name']), 'categories' => DB::table('categories')->orderBy('name')->get(['id', 'name']),
+            'filters' => self::salesFilters($f, $from, $to)];
+        [$cond, $b] = self::lineFilter($f, 'l');
+
+        if (($f['by'] ?? '') === 'item') {
+            $rows = self::salesQuery($f)->join('sale_lines as l', 'l.sale_id', '=', 's.id')->join('items as i', 'i.id', '=', 'l.item_id')->leftJoin('categories as ct', 'ct.id', '=', 'i.category_id')
+                ->when($cond !== '', fn ($q) => $q->whereRaw('1 = 1' . $cond, $b))
+                ->groupBy('i.id', 'i.name', 'ct.name')->orderBy('i.name')
+                ->selectRaw("i.name, ct.name as category, count(distinct s.id) as invoices, sum(l.qty) as qty, sum(l.qty * l.price) as taxable,
+                    sum(case when s.tax_mode = 'none' then 0 else l.qty * l.price * l.gst_percent / 100 end) as gst")->get();
+            $tot = ['qty' => 0, 'taxable' => 0.0, 'gst' => 0.0];
+            $out = [];
+            foreach ($rows as $r) {
+                $taxable = Tax::r2((float) $r->taxable);
+                $gst = Tax::r2((float) $r->gst);
+                $tot['qty'] += (int) $r->qty; $tot['taxable'] += $taxable; $tot['gst'] += $gst;
+                $out[] = [$r->name, (string) $r->category, (int) $r->invoices, (int) $r->qty, (int) $r->qty > 0 ? Tax::r2($taxable / (int) $r->qty) : 0.0, $taxable, $gst, Tax::r2($taxable + $gst)];
+            }
+            return $common + ['name' => 'sales-by-item',
+                'cols' => [['Item', ''], ['Category', ''], ['Invoices', 'n'], ['Qty', 'n'], ['Average price', 'm'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm']],
+                'rows' => $out, 'meta' => [],
+                'summary' => [['Items', (string) count($out)], ['Qty', (string) $tot['qty']], ['Taxable', Tax::money($tot['taxable'])], ['GST', Tax::money($tot['gst'])], ['Total', Tax::money($tot['taxable'] + $tot['gst'])]],
+                'note' => 'One row per item for the dates and filters chosen (item totals, before the invoice round-off).'];
+        }
+
+        $rows = self::salesQuery($f)->orderByRaw('date(s.created_at) desc')->orderByDesc('s.id')
+            ->selectRaw("s.id, s.no, s.created_at, s.taxable, s.cgst, s.sgst, s.igst, s.total, s.tax_mode, c.name as customer,
+                (select group_concat(concat(i2.name, ' x', l2.qty) order by l2.id separator ', ') from sale_lines l2 join items i2 on i2.id = l2.item_id where l2.sale_id = s.id" . str_replace(' l.', ' l2.', $cond) . ") as products,
+                (select coalesce(sum(l.qty), 0) from sale_lines l where l.sale_id = s.id" . $cond . ") as qty,
+                (select coalesce(sum(l.qty * l.price), 0) from sale_lines l where l.sale_id = s.id" . $cond . ") as ltaxable,
+                (select coalesce(sum(l.qty * l.price * l.gst_percent / 100), 0) from sale_lines l where l.sale_id = s.id" . $cond . ") as lgst", array_merge($b, $b, $b, $b))->get();
+        $filtered = $cond !== '';   // with an item / category chosen the amounts are those of the matching lines only
+        $tot = ['taxable' => 0.0, 'gst' => 0.0, 'total' => 0.0];
+        $out = [];
+        foreach ($rows as $r) {
+            if ($filtered) {
+                $taxable = Tax::r2((float) $r->ltaxable);
+                $gst = $r->tax_mode === 'none' ? 0.0 : Tax::r2((float) $r->lgst);
+                $total = Tax::r2($taxable + $gst);
+            } else {
+                $taxable = (float) $r->taxable;
+                $gst = Tax::r2((float) $r->cgst + (float) $r->sgst + (float) $r->igst);
+                $total = (float) $r->total;
+            }
+            $tot['taxable'] += $taxable; $tot['gst'] += $gst; $tot['total'] += $total;
+            $out[] = [$r->no, substr((string) $r->created_at, 0, 10), $r->customer, (string) $r->products, (int) $r->qty, $taxable, $gst, $total];
+        }
+        return $common + ['name' => 'sales-register',
+            'cols' => [['Invoice', ''], ['Date', 'd'], ['Customer', ''], ['Products', ''], ['Qty', 'n'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm']],
+            'rows' => $out, 'meta' => $rows->pluck('id')->all(),
+            'summary' => [['Invoices', (string) count($out)], ['Taxable', Tax::money($tot['taxable'])], ['GST', Tax::money($tot['gst'])], ['Total', Tax::money($tot['total'])]],
+            'note' => 'Invoices are picked by invoice date. With an item or category chosen, the amounts are those of the matching lines only.'];
+    }
+
     /* ---------- Purchase report ---------- */
 
     /* From / to of the purchase report. Default: last month (1st to last day). The dates are the purchase invoice dates. */
@@ -137,17 +223,22 @@ class Reports
     }
 
     /* " and ..." condition (and its bindings) that keeps only the purchase lines of the chosen item / category. $a = the purchase_lines alias. */
+    private static function like(string $v): string
+    {
+        return '%' . addcslashes(trim($v), '%_\\') . '%';
+    }
+
     private static function lineFilter(array $f, string $a): array
     {
         $cond = '';
         $b = [];
-        if (!empty($f['item'])) {
-            $cond .= " and $a.item_id = ?";
-            $b[] = (int) $f['item'];
+        if (trim((string) ($f['item'] ?? '')) !== '') {
+            $cond .= " and $a.item_id in (select id from items where name like ?)";
+            $b[] = self::like((string) $f['item']);
         }
-        if (!empty($f['category'])) {
-            $cond .= " and $a.item_id in (select id from items where category_id = ?)";
-            $b[] = (int) $f['category'];
+        if (trim((string) ($f['category'] ?? '')) !== '') {
+            $cond .= " and $a.item_id in (select i9.id from items i9 join categories c9 on c9.id = i9.category_id where c9.name like ?)";
+            $b[] = self::like((string) $f['category']);
         }
         return [$cond, $b];
     }
@@ -184,7 +275,7 @@ class Reports
     private static function purchaseFilters(array $f, string $from, string $to): array
     {
         return ['from' => $from, 'to' => $to, 'supplier' => !empty($f['supplier']) ? (int) $f['supplier'] : '',
-            'item' => !empty($f['item']) ? (int) $f['item'] : '', 'category' => !empty($f['category']) ? (int) $f['category'] : '',
+            'item' => trim((string) ($f['item'] ?? '')), 'category' => trim((string) ($f['category'] ?? '')),
             'by' => (($f['by'] ?? '') === 'item') ? 'item' : 'bill'];
     }
 
@@ -231,8 +322,7 @@ class Reports
         }
         $lines = DB::table('purchase_lines as l')->join('purchases as p', 'p.id', '=', 'l.purchase_id')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
             ->join('items as i', 'i.id', '=', 'l.item_id')->whereIn('l.purchase_id', $ids)
-            ->when(!empty($f['item']), fn ($q) => $q->where('l.item_id', (int) $f['item']))
-            ->when(!empty($f['category']), fn ($q) => $q->whereIn('l.item_id', DB::table('items')->where('category_id', (int) $f['category'])->select('id')))
+            ->when(self::lineFilter($f, 'l')[0] !== '', fn ($q) => $q->whereRaw('1 = 1' . self::lineFilter($f, 'l')[0], self::lineFilter($f, 'l')[1]))
             ->orderBy('p.id')->orderBy('l.id')
             ->get(['l.id', 'l.purchase_id', 'l.config', 'l.qty', 'l.rate', 'l.barcoded', 'l.hsn', 'l.brand_tags', 'i.name as item', 'i.hsn as item_hsn', 'i.gst_percent', 'p.inv_no', 'p.inv_date', 'p.created_at', 'p.type', 's.name as supplier']);
         $codes = DB::table('devices')->whereIn('purchase_id', $ids)->selectRaw('purchase_line_id, count(*) as n, min(code) as lo, max(code) as hi')->groupBy('purchase_line_id')->get()->keyBy('purchase_line_id');

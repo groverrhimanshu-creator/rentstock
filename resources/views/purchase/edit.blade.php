@@ -45,7 +45,7 @@
         <div class="rowx"><button class="ab solid">Save</button><a class="ab" href="{{ route('purchase.show', $p->id) }}">Cancel</a></div>
     </div>
 </form>
-<script>window.PEDIT = {!! json_encode(['items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'hsn' => (string) $i->hsn, 'gst' => (float) $i->gst_percent])->values()->all(), 'companyState' => $companyState], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
+<script>window.PEDIT = {!! json_encode(['items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'hsn' => (string) $i->hsn, 'gst' => (float) $i->gst_percent, 'cat' => (string) $i->cat, 'brand' => (string) $i->brand])->values()->all(), 'companyState' => $companyState], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
 <script src="{{ \App\Support\Assets::url('assets/purchaseadd.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/itemsearch.js') }}"></script>
 <script src="{{ \App\Support\Assets::url('assets/purchaseedit.js') }}"></script>

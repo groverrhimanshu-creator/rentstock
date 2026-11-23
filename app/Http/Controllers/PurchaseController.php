@@ -224,7 +224,7 @@ class PurchaseController extends Controller
         return view('purchase.form', [
             'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code']),
             'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']),
-            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked', 'gst_percent', 'hsn']),
+            'items' => DB::table('items as i')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->orderBy('i.name')->get(['i.id', 'i.name', 'i.tracked', 'i.gst_percent', 'i.hsn', 'c.name as cat', 'b.name as brand']),
             'brands' => DB::table('brands')->orderBy('name')->get(['id', 'name']),
             'categories' => DB::table('categories')->orderBy('name')->get(['id', 'name']),
             'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
@@ -340,7 +340,7 @@ class PurchaseController extends Controller
         return view('purchase.edit', [
             'p' => $p,
             'lines' => DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn']),
-            'items' => DB::table('items')->orderBy('name')->get(['id', 'name', 'tracked', 'hsn', 'gst_percent']),
+            'items' => DB::table('items as i')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->orderBy('i.name')->get(['i.id', 'i.name', 'i.tracked', 'i.hsn', 'i.gst_percent', 'c.name as cat', 'b.name as brand']),
             'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
             'why' => DB::table('purchase_lines')->where('purchase_id', $id)->get()->mapWithKeys(fn ($l) => [$l->id => Purchases::lineRemoveBlocker($l)])->all(),
             'codes' => DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id'])->groupBy('purchase_line_id'),
