@@ -484,3 +484,17 @@ New column: Products (what was sold on the invoice).
 STEP 41i - ITEM / CATEGORY ARE SEARCH BOXES IN PURCHASE REPORT AND SALES REGISTER   (no migration)
 Reports > Purchase report and Sales register: Item and Category are now type-to-search boxes (suggestions appear as you type, any part of the name works),
 press Enter (or Show) to filter the list. Leave empty for all.
+
+
+=====================================================================
+STEP 41j - BARCODE NUMBERS FOLLOW THE STOCK (fill gaps, continue after the highest)   (no migration)
+=====================================================================
+New barcodes (purchase, and raising a quantity on edit) now take the LOWEST FREE numbers of the series that is in stock:
+  - 10 pieces uploaded (1..10): the next purchase starts at 11.
+  - piece 15 deleted: the next new piece gets 15 (then 16, ...), not a number after the highest.
+  - the series starts at the lowest barcode in stock; it no longer follows an old hidden counter (that is why new codes could start at 7000xxx).
+  - a number that an old document still points to (a past sale, rental, return, replacement, upgrade) is never reused.
+  - when there is no barcoded piece at all, the first number is BARCODE_START in .env (default 600001).
+New purchase screen shows the exact numbers each row will get; they are final when you press Save.
+Purchase item-details download shows runs like "KPI11, KPI15 to KPI18 (5)".
+Stock import with its own barcodes is unchanged.

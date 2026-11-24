@@ -13,6 +13,9 @@ return [
     'brand' => ['Rental', 'Solutions'],
 
     // SubAdmin logins are created and given their permissions on the Users page (Admin only). Set SUBADMIN_ENABLED=false in .env to switch every SubAdmin login off.
+    // First barcode number of a brand-new stock (used only while there is no barcoded piece at all).
+    'barcode_start' => (int) env('BARCODE_START', 600001),
+
     'subadmin_enabled' => (bool) env('SUBADMIN_ENABLED', true),
 
     // HSN / SAC code printed on every rent line (renting of IT equipment). Sold items keep the HSN of the item.

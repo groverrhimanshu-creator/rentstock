@@ -41,24 +41,78 @@ class Barcodes
         return preg_match('/^[0-9]{4,9}$/', $s) ? (int) $s : null;
     }
 
-    /* Gives out the next number. Safe when two people save at the same moment: the counter row is locked by the UPDATE. */
-    public static function next(): int
+    /*
+     * The $n lowest barcode numbers that are free, without using them.
+     * The series starts at the lowest barcode in stock (or BARCODE_START when there is none) and runs upwards: a number freed by a deleted
+     * piece is given out again before a new higher one, and after the highest piece the numbers simply carry on. A number that an old
+     * document still points to (a past sale, rental, return, replacement or upgrade) is never given out again, so no history is mixed up.
+     */
+    public static function free(int $n): array
     {
-        DB::update("UPDATE counters SET value = LAST_INSERT_ID(value + 1) WHERE name = 'barcode'");
-        return (int) DB::selectOne('SELECT LAST_INSERT_ID() AS id')->id;
+        $lo = DB::table('devices')->min('code');
+        $expected = $lo === null ? (int) config('rentstock.barcode_start', 600001) : (int) $lo;
+        $taken = DB::table('devices')->select('code')
+            ->union(DB::table('sale_lines')->whereNotNull('code')->select('code'))
+            ->union(DB::table('rental_lines')->select('code'))
+            ->union(DB::table('return_lines')->select('code'))
+            ->union(DB::table('replacements')->select('old_code'))
+            ->union(DB::table('replacements')->select('new_code'))
+            ->union(DB::table('consumptions')->select('code'))
+            ->orderBy('code')->pluck('code');
+        $out = [];
+        foreach ($taken as $c) {
+            $c = (int) $c;
+            if ($c < $expected) {
+                continue;
+            }
+            while ($expected < $c && count($out) < $n) {
+                $out[] = $expected++;
+            }
+            if (count($out) >= $n) {
+                return $out;
+            }
+            $expected = $c + 1;
+        }
+        while (count($out) < $n) {
+            $out[] = $expected++;
+        }
+        return $out;
     }
 
-    /* Reserves $n numbers in one go and returns the first of them. */
-    public static function reserve(int $n): int
+    /* Takes $n numbers for new pieces (the same list free() shows). Call it inside the transaction that saves the pieces: the counter row is locked until then. */
+    public static function allocate(int $n): array
     {
-        DB::update("UPDATE counters SET value = LAST_INSERT_ID(value + ?) WHERE name = 'barcode'", [$n]);
-        return (int) DB::selectOne('SELECT LAST_INSERT_ID() AS id')->id - $n + 1;
+        DB::table('counters')->insertOrIgnore(['name' => 'barcode', 'value' => 0]);
+        DB::table('counters')->where('name', 'barcode')->lockForUpdate()->value('value');
+        $codes = self::free($n);
+        if ($codes) {
+            self::raise(max($codes));
+        }
+        return $codes;
     }
 
     /* The number that will be given out next, without using it. */
     public static function peek(): int
     {
-        return (int) DB::table('counters')->where('name', 'barcode')->value('value') + 1;
+        return self::free(1)[0];
+    }
+
+    /* "KPI11, KPI15 to KPI18 (5)": a list of barcode numbers written short. */
+    public static function compact(array $codes): string
+    {
+        sort($codes);
+        $runs = [];
+        $i = 0;
+        $n = count($codes);
+        while ($i < $n) {
+            $j = $i;
+            while ($j + 1 < $n && $codes[$j + 1] === $codes[$j] + 1) {
+                $j++;
+            }
+            $runs[] = $j > $i ? self::text((int) $codes[$i]) . ' to ' . self::text((int) $codes[$j]) : self::text((int) $codes[$i]);
+            $i = $j + 1;
+        }
+        return implode(', ', $runs) . ($n > 1 ? ' (' . $n . ')' : '');
     }
 
     /* When a barcode from an old sheet is higher than our counter, move the counter up so we never repeat it. */

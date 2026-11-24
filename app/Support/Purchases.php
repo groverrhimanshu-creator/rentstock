@@ -50,18 +50,18 @@ class Purchases
             'brand_tags' => !$want && !empty($l['tags']) ? mb_substr(implode(', ', $l['tags']), 0, 2000) : null,
         ]);
         if ($want) {
-            $first = Barcodes::reserve($l['qty']);
+            $codes = Barcodes::allocate((int) $l['qty']);
             $now = now();
             $devices = [];
             $history = [];
             $cfglog = [];
             for ($i = 0; $i < $l['qty']; $i++) {
                 $devices[] = [
-                    'code' => $first + $i, 'item_id' => $item->id, 'config' => $config, 'brand_tag' => ($l['tags'][$i] ?? '') !== '' ? $l['tags'][$i] : self::tag(), 'status' => 'in_stock',
+                    'code' => $codes[$i], 'item_id' => $item->id, 'config' => $config, 'brand_tag' => ($l['tags'][$i] ?? '') !== '' ? $l['tags'][$i] : self::tag(), 'status' => 'in_stock',
                     'store_id' => $d['store_id'], 'purchase_id' => $pid, 'purchase_line_id' => $lid, 'created_at' => $now,
                 ];
-                $history[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId];
-                $cfglog[] = ['code' => $first + $i, 'event' => 'start', 'new' => $config, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId, 'at' => $now];
+                $history[] = ['code' => $codes[$i], 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId];
+                $cfglog[] = ['code' => $codes[$i], 'event' => 'start', 'new' => $config, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $pid . ')', 'user_id' => $userId, 'at' => $now];
             }
             foreach (array_chunk($devices, 500) as $c) {
                 DB::table('devices')->insert($c);
@@ -269,15 +269,15 @@ class Purchases
                         if (count($tags) !== $diff) {
                             throw new \RuntimeException('"' . $iname . '": to add ' . $diff . ' piece' . ($diff === 1 ? '' : 's') . ' enter ' . $diff . ' brand tag' . ($diff === 1 ? '' : 's') . ' in "New brand tags", separated by commas. You entered ' . count($tags) . '.');
                         }
-                        $first = Barcodes::reserve($diff);
+                        $newCodes = Barcodes::allocate($diff);
                         $now = now();
                         $dev = [];
                         $his = [];
                         $cfl = [];
                         for ($i = 0; $i < $diff; $i++) {
-                            $dev[] = ['code' => $first + $i, 'item_id' => $itemId, 'config' => $cfg, 'brand_tag' => $tags[$i], 'status' => 'in_stock', 'store_id' => $d['store_id'], 'purchase_id' => $id, 'purchase_line_id' => $l->id, 'created_at' => $now];
-                            $his[] = ['code' => $first + $i, 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ', quantity raised)', 'user_id' => $userId];
-                            $cfl[] = ['code' => $first + $i, 'event' => 'start', 'new' => $cfg, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ')', 'user_id' => $userId, 'at' => $now];
+                            $dev[] = ['code' => $newCodes[$i], 'item_id' => $itemId, 'config' => $cfg, 'brand_tag' => $tags[$i], 'status' => 'in_stock', 'store_id' => $d['store_id'], 'purchase_id' => $id, 'purchase_line_id' => $l->id, 'created_at' => $now];
+                            $his[] = ['code' => $newCodes[$i], 'at' => $now, 'text' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ', quantity raised)', 'user_id' => $userId];
+                            $cfl[] = ['code' => $newCodes[$i], 'event' => 'start', 'new' => $cfg, 'note' => 'Purchased from ' . $supplier . ' (purchase no ' . $id . ')', 'user_id' => $userId, 'at' => $now];
                         }
                         foreach (array_chunk($dev, 500) as $c) {
                             DB::table('devices')->insert($c);

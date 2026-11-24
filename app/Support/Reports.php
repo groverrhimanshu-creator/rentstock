@@ -325,7 +325,7 @@ class Reports
             ->when(self::lineFilter($f, 'l')[0] !== '', fn ($q) => $q->whereRaw('1 = 1' . self::lineFilter($f, 'l')[0], self::lineFilter($f, 'l')[1]))
             ->orderBy('p.id')->orderBy('l.id')
             ->get(['l.id', 'l.purchase_id', 'l.config', 'l.qty', 'l.rate', 'l.barcoded', 'l.hsn', 'l.brand_tags', 'i.name as item', 'i.hsn as item_hsn', 'i.gst_percent', 'p.inv_no', 'p.inv_date', 'p.created_at', 'p.type', 's.name as supplier']);
-        $codes = DB::table('devices')->whereIn('purchase_id', $ids)->selectRaw('purchase_line_id, count(*) as n, min(code) as lo, max(code) as hi')->groupBy('purchase_line_id')->get()->keyBy('purchase_line_id');
+        $codes = DB::table('devices')->whereIn('purchase_id', $ids)->orderBy('code')->get(['purchase_line_id', 'code'])->groupBy('purchase_line_id');
         $tagRows = DB::table('devices')->whereIn('purchase_id', $ids)->orderBy('code')->get(['purchase_line_id', 'brand_tag'])->groupBy('purchase_line_id');
         $out = [];
         foreach ($lines as $l) {
@@ -338,7 +338,7 @@ class Reports
                 'amount' => number_format($amount, 2, '.', ''), 'gst' => $l->type === 'GST' ? number_format(Tax::r2($amount * (float) $l->gst_percent / 100), 2, '.', '') : '0.00',
                 'kind' => $l->barcoded ? 'Barcoded' : 'By quantity', 'hsn' => (string) ($l->hsn ?: $l->item_hsn),
                 'tags' => isset($tagRows[$l->id]) ? $tagRows[$l->id]->pluck('brand_tag')->filter()->implode(', ') : (string) ($l->brand_tags ?? ''),
-                'barcodes' => $c ? ($c->n > 1 ? Barcodes::text((int) $c->lo) . ' to ' . Barcodes::text((int) $c->hi) . ' (' . $c->n . ')' : Barcodes::text((int) $c->lo)) : '',
+                'barcodes' => $c ? Barcodes::compact($c->pluck('code')->map(fn ($x) => (int) $x)->all()) : '',
             ];
         }
         return $out;

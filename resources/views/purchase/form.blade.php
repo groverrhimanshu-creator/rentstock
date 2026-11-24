@@ -48,7 +48,7 @@
 </form>
 @php
     $pdata = [
-        'companyState' => $companyState, 'prefix' => \App\Support\Barcodes::prefix(), 'nextCode' => \App\Support\Barcodes::peek(), 'quickUrl' => route('purchase.quick-item'), 'importUrl' => route('purchase.import'),
+        'companyState' => $companyState, 'prefix' => \App\Support\Barcodes::prefix(), 'free' => \App\Support\Barcodes::free(3000), 'quickUrl' => route('purchase.quick-item'), 'importUrl' => route('purchase.import'),
         'items' => $items->map(function ($i) {
             return ['id' => $i->id, 'name' => $i->name, 'tracked' => (bool) $i->tracked, 'gst' => (float) $i->gst_percent, 'hsn' => (string) $i->hsn, 'cat' => (string) $i->cat, 'brand' => (string) $i->brand];
         })->values()->all(),

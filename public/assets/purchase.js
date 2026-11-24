@@ -6,7 +6,12 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
     function item(id) { for (var i = 0; i < C.items.length; i++) { if (String(C.items[i].id) === String(id)) { return C.items[i]; } } return null; }
 
-    function range(a, z) { var r = []; for (var x = a; x <= z; x++) { r.push(C.prefix + x); } return r; }
+    /* KPI11, KPI15 to KPI18 (5): runs of consecutive numbers written short */
+    function fmt(a) {
+        var runs = [], i = 0;
+        while (i < a.length) { var j = i; while (j + 1 < a.length && a[j + 1] === a[j] + 1) { j++; } runs.push(j > i ? C.prefix + a[i] + ' to ' + C.prefix + a[j] : C.prefix + a[i]); i = j + 1; }
+        return runs.join(', ') + (a.length > 1 ? ' (' + a.length + ')' : '');
+    }
 
     function addRow(v) {
         v = v || {};
@@ -33,7 +38,7 @@
         var type = document.getElementById('type').value;
         var mode = !sup.value ? 'none' : (type !== 'GST' ? 'none' : (opt.getAttribute('data-state') === C.companyState ? 'intra' : 'inter'));
         var taxable = 0, tax = 0, trs = rows.querySelectorAll('tr');
-        var code = Number(C.nextCode) || 0, first = 0, last = 0, total = 0;   // barcodes are given out in row order
+        var free = (C.free || []).slice(), pos = 0, all = [], total = 0;   // barcodes are given out in row order: the lowest free numbers first
         trs.forEach(function (tr) {
             var it = item(tr.querySelector('[data-f=item]').value);
             var q = Number(tr.querySelector('[data-f=qty]').value) || 0, r = Number(tr.querySelector('[data-f=rate]').value) || 0;
@@ -51,13 +56,15 @@
             tn.style.color = bcy && it && tcount !== Math.floor(q) ? '#B3261E' : '';
             // the barcodes this row will get when the purchase is saved
             var cell = tr.querySelector('[data-f=codes]'), n = Math.floor(q);
-            if (it && tr.querySelector('[data-f=bc]').value === 'yes' && n > 0 && code) {
-                var a = code, z = code + n - 1; code += n; total += n; if (!first) { first = a; } last = z;
-                cell.textContent = n <= 4 ? range(a, z).join(', ') : C.prefix + a + ' to ' + C.prefix + z + ' (' + n + ')';
+            if (it && tr.querySelector('[data-f=bc]').value === 'yes' && n > 0 && free.length) {
+                var mine = [];
+                for (var k = 0; k < n; k++) { mine.push(pos < free.length ? free[pos] : (free[free.length - 1] + 1 + (pos - free.length))); pos++; }
+                total += n; all = all.concat(mine);
+                cell.textContent = fmt(mine);
             } else { cell.textContent = it ? (tr.querySelector('[data-f=bc]').value === 'yes' ? '' : 'No barcode') : ''; }
         });
         var sum = document.getElementById('codesum');
-        if (sum) { sum.textContent = total ? 'Barcodes that will be made: ' + C.prefix + first + ' to ' + C.prefix + last + ' (' + total + ' pieces)' : 'No barcodes will be made yet.'; }
+        if (sum) { sum.textContent = total ? 'Barcodes that will be made: ' + fmt(all) + (total > 1 ? '' : '') : 'No barcodes will be made yet.'; }
         taxable = r2(taxable); tax = r2(tax);
         document.getElementById('t-taxable').textContent = money(taxable);
         document.getElementById('t-tax').textContent = money(tax);
