@@ -13,8 +13,14 @@ return [
     'brand' => ['Rental', 'Solutions'],
 
     // SubAdmin logins are created and given their permissions on the Users page (Admin only). Set SUBADMIN_ENABLED=false in .env to switch every SubAdmin login off.
-    // First barcode number of a brand-new stock (used only while there is no barcoded piece at all).
-    'barcode_start' => (int) env('BARCODE_START', 600001),
+    // First barcode number of the series, for example 900001. Empty = start at the lowest barcode in stock (600001 when there is none).
+    'barcode_start' => env('BARCODE_START') ? (int) env('BARCODE_START') : null,
+
+    // Paid extras, OFF unless switched on in .env:
+    //   ACTIVITY_LOG_ENABLED=true   the Admin's Activity Log page (who did what). The log is still recorded while it is off, so switching it on shows the history.
+    //   TASK_ASSIGN_ENABLED=true    give tasks to other logins and see everybody's tasks (without it everybody has only his own list).
+    'activity_log' => (bool) env('ACTIVITY_LOG_ENABLED', false),
+    'task_assign' => (bool) env('TASK_ASSIGN_ENABLED', false),
 
     'subadmin_enabled' => (bool) env('SUBADMIN_ENABLED', true),
 

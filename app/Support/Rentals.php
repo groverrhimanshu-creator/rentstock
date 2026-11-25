@@ -76,6 +76,7 @@ class Rentals
                 'status' => 'rented', 'customer_id' => $customer->id, 'rented_at' => $now, 'return_by' => $d['return_by'] ?: null, 'rent_no' => $no,
             ]);
             self::addHistory($hist);
+            Audit::created('rental challan', 'rentals', (int) $rid);
             return $rid;
         });
     }
@@ -341,6 +342,7 @@ class Rentals
             if ($sale) {
                 Sales::takeLines($sale, $customer, $no, $userId);
             }
+            Audit::created('rental invoice', 'rentals', (int) $rid);
             return $rid;
         });
     }

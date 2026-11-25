@@ -359,7 +359,8 @@ class StockController extends Controller
             return view('stock.import', $this->importData($text, $this->report($text), 'Nothing to import.'));
         }
         try {
-            [, $count] = Stock::importRows($good, $request->user()->id);
+            [$entryNo, $count] = Stock::importRows($good, $request->user()->id);
+            \App\Support\Audit::log('add', 'stock entry', $entryNo, $count . ' items imported into stock');
         } catch (QueryException $e) {
             if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
                 return view('stock.import', $this->importData($text, $this->report($text), 'Some of these barcodes were added by someone else a moment ago. The check has been run again.'));

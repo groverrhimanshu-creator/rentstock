@@ -22,6 +22,7 @@ class Perm
         'barcodes' => ['Print barcodes', ['view' => 'Print']],
         'payments' => ['Payments and reminders', ['view' => 'View', 'manage' => 'Send reminders / mark paid']],
         'reports' => ['Reports', ['view' => 'View']],
+        'tasks' => ['Tasks (own list; Manage = give tasks to others and see everybody\'s)', ['view' => 'View', 'create' => 'Create', 'manage' => 'Manage team tasks', 'edit' => 'Complete / reschedule / edit', 'delete' => 'Delete']],
         'masters' => ['Masters (brand, category, unit, store, customer, supplier, item, bank)', ['view' => 'View', 'create' => 'Add / import', 'edit' => 'Edit', 'delete' => 'Delete']],
     ];
 
@@ -32,7 +33,7 @@ class Perm
     public const USUAL = [
         'purchase.view', 'purchase.create', 'sale.view', 'sale.create', 'rental.view', 'rental.create', 'return.view', 'return.create',
         'replacement.view', 'replacement.create', 'consumption.view', 'consumption.create', 'stock.view', 'stock.import', 'stock.repair',
-        'barcodes.view', 'payments.view', 'payments.manage', 'reports.view',
+        'barcodes.view', 'payments.view', 'payments.manage', 'reports.view', 'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete',
     ];
 
     public static function presets(): array
@@ -111,6 +112,9 @@ class Perm
     {
         $have = array_flip(self::granted($user));
         foreach (explode('|', $keys) as $k) {
+            if (trim($k) === 'tasks.manage' && !Features::taskAssign()) {
+                continue;   // paid extra, off: nobody (not even the Admin) can give tasks to others
+            }
             if (isset($have[trim($k)])) {
                 return true;
             }

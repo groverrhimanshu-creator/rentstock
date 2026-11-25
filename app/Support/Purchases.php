@@ -33,6 +33,7 @@ class Purchases
             foreach ($d['lines'] as $l) {
                 $added += self::makeLine($pid, $l, $d, $supplier, $userId);
             }
+            Audit::created('purchase', 'purchases', (int) $pid);
             return [$pid, $added];
         });
     }

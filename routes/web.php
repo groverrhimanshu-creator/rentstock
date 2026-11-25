@@ -42,6 +42,17 @@ Route::middleware(['auth', 'role'])->group(function () {
     Route::get('/page/{screen}', [PageController::class, 'show'])->name('page');
 
     Route::get('/dashboard', DashboardController::class)->middleware('role:admin,subadmin')->name('dashboard');
+    Route::middleware('role:admin,subadmin')->group(function () {
+        $T = \App\Http\Controllers\TasksController::class;
+        Route::get('/tasks', [$T, 'index'])->middleware('perm:tasks.view')->name('tasks.index');
+        Route::post('/tasks', [$T, 'store'])->middleware('perm:tasks.create')->name('tasks.store');
+        Route::get('/tasks/{id}/edit', [$T, 'edit'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.edit');
+        Route::put('/tasks/{id}', [$T, 'update'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.update');
+        Route::post('/tasks/{id}/done', [$T, 'done'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.done');
+        Route::post('/tasks/{id}/reopen', [$T, 'reopen'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.reopen');
+        Route::post('/tasks/{id}/reschedule', [$T, 'reschedule'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.reschedule');
+        Route::delete('/tasks/{id}', [$T, 'destroy'])->whereNumber('id')->middleware('perm:tasks.delete')->name('tasks.destroy');
+    });
 
     /*
      * Staff screens. Each route says which permission it needs (perm:module.action). The Admin passes every check;
@@ -209,6 +220,8 @@ Route::middleware(['auth', 'role'])->group(function () {
 
     // Users and their permissions, customer logins and the company profile are for the Admin only.
     Route::middleware('role:admin')->group(function () {
+        Route::get('/activity', [\App\Http\Controllers\ActivityController::class, 'index'])->name('activity.index');
+        Route::get('/activity/export', [\App\Http\Controllers\ActivityController::class, 'csv'])->name('activity.csv');
         Route::get('/users', [UsersController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UsersController::class, 'create'])->name('users.create');
         Route::post('/users', [UsersController::class, 'store'])->name('users.store');

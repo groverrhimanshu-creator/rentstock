@@ -29,4 +29,16 @@ class Features
     {
         return (bool) config('rentstock.pwa') && !config('rentstock.pwa_users');
     }
+
+    /* Paid extra: the Admin's Activity Log page. */
+    public static function activityLog(): bool
+    {
+        return (bool) config('rentstock.activity_log');
+    }
+
+    /* Paid extra: giving tasks to other logins and seeing everybody's tasks. */
+    public static function taskAssign(): bool
+    {
+        return (bool) config('rentstock.task_assign');
+    }
 }

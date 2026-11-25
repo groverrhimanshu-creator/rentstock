@@ -86,6 +86,7 @@ class Moves
             DB::table('rental_lines')->whereIn('code', $codes)->whereNull('returned_at')
                 ->whereIn('rental_id', DB::table('rentals')->where('kind', 'challan')->select('id'))
                 ->update(['returned_at' => $now, 'return_id' => $rid]);
+            Audit::created('return', 'returns', (int) $rid);
             return $rid;
         });
     }
@@ -206,6 +207,7 @@ class Moves
                 $newHist = self::history((int) $new->code, 'Rented to ' . $customer->name . ' as replacement for ' . self::bc((int) $old->code), $userId, $now);
             }
             DB::table('replacements')->where('id', $rid)->update(['old_hist_id' => $oldHist, 'new_hist_id' => $newHist]);
+            Audit::created('replacement', 'replacements', (int) $rid);
             return $rid;
         });
     }
@@ -380,6 +382,7 @@ class Moves
                     $isPart ? 'Part replaced: ' . $u['label'] . ($u['item'] ? ' (stock item: ' . $u['item']->name . ')' : '') : $partText . ': ' . $from . ' to ' . $u['label'] . ' (part: ' . $u['item']->name . ')', $userId, $now);
             }
             DB::table('devices')->where('code', $dv->code)->update(['config' => $chain[count($chain) - 1]['cfg_after']]);
+            Audit::created('upgrade', 'consumptions', (int) $last);
             return (int) $last;
         });
     }

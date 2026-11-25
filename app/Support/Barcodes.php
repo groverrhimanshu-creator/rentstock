@@ -42,39 +42,27 @@ class Barcodes
     }
 
     /*
-     * The $n lowest barcode numbers that are free, without using them.
-     * The series starts at the lowest barcode in stock (or BARCODE_START when there is none) and runs upwards: a number freed by a deleted
-     * piece is given out again before a new higher one, and after the highest piece the numbers simply carry on. A number that an old
-     * document still points to (a past sale, rental, return, replacement or upgrade) is never given out again, so no history is mixed up.
+     * The next $n barcode numbers, without using them: they carry on after the LAST (highest) barcode that exists.
+     * Gaps left by deleted pieces are not filled. "Exists" means a piece in stock or a number an old document (sale, rental, return,
+     * replacement, upgrade) still points to, so no number is ever given out twice. With nothing yet, the series starts at BARCODE_START
+     * (.env) or 600001. A BARCODE_START higher than the last number moves the series up to it (for example 900001).
      */
     public static function free(int $n): array
     {
-        $lo = DB::table('devices')->min('code');
-        $expected = $lo === null ? (int) config('rentstock.barcode_start', 600001) : (int) $lo;
-        $taken = DB::table('devices')->select('code')
-            ->union(DB::table('sale_lines')->whereNotNull('code')->select('code'))
-            ->union(DB::table('rental_lines')->select('code'))
-            ->union(DB::table('return_lines')->select('code'))
-            ->union(DB::table('replacements')->select('old_code'))
-            ->union(DB::table('replacements')->select('new_code'))
-            ->union(DB::table('consumptions')->select('code'))
-            ->orderBy('code')->pluck('code');
+        $last = max(
+            (int) DB::table('devices')->max('code'),
+            (int) DB::table('sale_lines')->max('code'),
+            (int) DB::table('rental_lines')->max('code'),
+            (int) DB::table('return_lines')->max('code'),
+            (int) DB::table('replacements')->max('old_code'),
+            (int) DB::table('replacements')->max('new_code'),
+            (int) DB::table('consumptions')->max('code')
+        );
+        $floor = (int) config('rentstock.barcode_start');
+        $start = max($last + 1, $floor > 0 ? $floor : 600001);
         $out = [];
-        foreach ($taken as $c) {
-            $c = (int) $c;
-            if ($c < $expected) {
-                continue;
-            }
-            while ($expected < $c && count($out) < $n) {
-                $out[] = $expected++;
-            }
-            if (count($out) >= $n) {
-                return $out;
-            }
-            $expected = $c + 1;
-        }
-        while (count($out) < $n) {
-            $out[] = $expected++;
+        for ($i = 0; $i < $n; $i++) {
+            $out[] = $start + $i;
         }
         return $out;
     }

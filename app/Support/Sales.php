@@ -87,6 +87,7 @@ class Sales
             foreach ($need as $itemId => $qty) {
                 DB::table('item_qty')->where('item_id', $itemId)->decrement('qty', $qty);
             }
+            Audit::created('sale invoice', 'sales', (int) $sid);
             return $sid;
         });
     }

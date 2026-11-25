@@ -36,6 +36,16 @@ class DashboardController extends Controller
                 ->select('r.id', 'r.no', 'r.created_at', 'cu.name as customer')
                 ->selectRaw('(select count(*) from rental_lines l where l.rental_id = r.id) as items')->get();
         }
-        return view('dashboard', ['c' => $c, 'due' => $due, 'latest' => $latest]);
+        $tasks = collect();
+        $c['tasks_overdue'] = 0;
+        $c['team_overdue'] = 0;
+        if (Schema::hasTable('tasks')) {
+            $uid = auth()->id();
+            $today = now()->toDateString();
+            $c['tasks_overdue'] = DB::table('tasks')->where('user_id', $uid)->where('status', 'open')->where('due_date', '<', $today)->count();
+            $c['team_overdue'] = \App\Support\Perm::has('tasks.manage') ? DB::table('tasks')->where('status', 'open')->where('user_id', '!=', $uid)->where('due_date', '<', $today)->count() : 0;
+            $tasks = DB::table('tasks')->where('user_id', $uid)->where('status', 'open')->where('due_date', '<=', $today)->orderBy('due_date')->limit(6)->get(['id', 'title', 'due_date']);
+        }
+        return view('dashboard', ['c' => $c, 'due' => $due, 'latest' => $latest, 'tasks' => $tasks]);
     }
 }

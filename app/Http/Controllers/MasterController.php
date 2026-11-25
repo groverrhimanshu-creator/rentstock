@@ -282,6 +282,7 @@ class MasterController extends Controller
                 } else {
                     DB::table($m['table'])->insert($vals);
                 }
+                Audit::log($id ? 'edit' : 'add', strtolower($m['title']), $id ?: ($cid ?: ($vals['name'] ?? '')), (string) ($vals['name'] ?? ''));
                 if ($login && $key === 'customer' && !DB::table('users')->where('role', 'customer')->where('customer_id', $cid)->exists()) {
                     User::create([
                         'username' => $login['login_username'],

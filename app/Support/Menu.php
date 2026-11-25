@@ -70,8 +70,14 @@ class Menu
                 $menu[] = $page($slug, $icon);
             }
         }
+        if (Perm::has('tasks.view')) {
+            $menu[] = ['id' => 'tasks', 'label' => 'My Tasks', 'icon' => 'doc', 'url' => route('tasks.index')];
+        }
         if (Perm::isAdmin()) {
             $menu[] = ['id' => 'users', 'label' => 'Users & Permissions', 'icon' => 'layers', 'url' => route('users.index')];
+            if (Features::activityLog()) {
+                $menu[] = ['id' => 'activity', 'label' => 'Activity Log', 'icon' => 'chart', 'url' => route('activity.index')];
+            }
             $menu[] = ['id' => 'profile', 'label' => 'Company Profile', 'icon' => 'building', 'url' => route('company.edit')];
         }
 
@@ -100,6 +106,12 @@ class Menu
         }
         if (str_starts_with($name, 'masters.')) {
             return 'master:' . $r->parameter('key');
+        }
+        if (str_starts_with($name, 'tasks.')) {
+            return 'tasks';
+        }
+        if (str_starts_with($name, 'activity.')) {
+            return 'activity';
         }
         if (str_starts_with($name, 'users.')) {
             return 'users';

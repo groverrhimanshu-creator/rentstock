@@ -57,12 +57,16 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
         $user->forceFill(['last_login' => now()])->save();
+        \App\Support\Audit::log('login', 'session', $user->id, ucfirst($user->role) . ' signed in from ' . $request->ip());
 
         return redirect()->intended($user->role === 'customer' ? route('page', 'portal') : route('dashboard'));
     }
 
     public function logout(Request $request)
     {
+        if (auth()->check()) {
+            \App\Support\Audit::log('logout', 'session', auth()->id(), 'Signed out');
+        }
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

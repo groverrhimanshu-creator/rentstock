@@ -10,6 +10,7 @@
         ['wrench', 'In repair', $c['repair'], 'inv:repair', ''],
         ['bars', 'Quantity items in stock', $c['qty'], 'inv:', ''],
         ['warn', 'Payments overdue', $c['pay_overdue'], 'payments', 'alert'],
+        ['warn', 'My tasks overdue', $c['tasks_overdue'], 'tasks', $c['tasks_overdue'] > 0 ? 'alert' : ''],
     ];
 @endphp
 <div class="kp">
@@ -22,6 +23,25 @@
         @endif
     @endforeach
 </div>
+@if (\App\Support\Perm::has('tasks.view'))
+<div class="cd" @if ($c['tasks_overdue'] > 0) style="border-color:#B3261E" @endif><h3>My tasks due<small style="margin-left:8px"><a href="{{ route('tasks.index') }}">All tasks</a></small></h3>
+    @if (($c['team_overdue'] ?? 0) > 0)<p class="hint" style="color:#B3261E;font-weight:700">{{ $c['team_overdue'] }} task{{ $c['team_overdue'] === 1 ? '' : 's' }} of your team {{ $c['team_overdue'] === 1 ? 'is' : 'are' }} overdue. <a href="{{ route('tasks.index', ['scope' => 'all', 'f' => 'overdue']) }}">See who</a></p>@endif
+    @forelse ($tasks as $tk)
+        @php($late = $tk->due_date < now()->toDateString())
+        <div class="rowx" style="justify-content:space-between;flex-wrap:wrap;gap:8px;padding:6px 0;border-top:1px solid var(--a-line)">
+            <span><b>{{ $tk->title }}</b> · <span style="color:{{ $late ? '#B3261E' : 'inherit' }};font-weight:{{ $late ? 700 : 400 }}">{{ $late ? 'Overdue, was due ' : 'Due today ' }}{{ \Carbon\Carbon::parse($tk->due_date)->format('d/m/Y') }}</span></span>
+            @if (\App\Support\Perm::has('tasks.edit'))
+                <span class="rowx" style="gap:6px">
+                    <form method="post" action="{{ route('tasks.done', $tk->id) }}" style="margin:0">@csrf<button class="ab sm solid">Done</button></form>
+                    <form method="post" action="{{ route('tasks.reschedule', $tk->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ now()->addDay()->toDateString() }}" style="width:140px"><button class="ab sm">Move</button></form>
+                </span>
+            @endif
+        </div>
+    @empty
+        <p class="hint">No task is due or overdue.</p>
+    @endforelse
+</div>
+@endif
 <div class="cols">
     <div class="cd"><h3>Returns due soon</h3>
         @forelse ($due as $d)

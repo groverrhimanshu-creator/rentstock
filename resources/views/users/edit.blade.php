@@ -52,7 +52,7 @@
                     <tr data-m="{{ $m }}">
                         <td><b>{{ $def[0] }}</b></td>
                         @foreach ($cols as $a => $label)
-                            @if (isset($def[1][$a]))
+                            @if (isset($def[1][$a]) && !($m . '.' . $a === 'tasks.manage' && !\App\Support\Features::taskAssign()))
                                 <td title="{{ $def[1][$a] }}"><label class="sw"><input type="checkbox" name="perm[]" value="{{ $m }}.{{ $a }}" data-a="{{ $a }}" aria-label="{{ $def[0] }}: {{ $def[1][$a] }}" @checked(isset($have[$m . '.' . $a]))><i></i></label></td>
                             @else
                                 <td class="na">-</td>

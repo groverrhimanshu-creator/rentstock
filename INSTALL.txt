@@ -487,14 +487,50 @@ press Enter (or Show) to filter the list. Leave empty for all.
 
 
 =====================================================================
-STEP 41j - BARCODE NUMBERS FOLLOW THE STOCK (fill gaps, continue after the highest)   (no migration)
+STEP 41j - BARCODE NUMBERS CARRY ON AFTER THE LAST ONE   (no migration)
 =====================================================================
-New barcodes (purchase, and raising a quantity on edit) now take the LOWEST FREE numbers of the series that is in stock:
-  - 10 pieces uploaded (1..10): the next purchase starts at 11.
-  - piece 15 deleted: the next new piece gets 15 (then 16, ...), not a number after the highest.
-  - the series starts at the lowest barcode in stock; it no longer follows an old hidden counter (that is why new codes could start at 7000xxx).
-  - a number that an old document still points to (a past sale, rental, return, replacement, upgrade) is never reused.
-  - when there is no barcoded piece at all, the first number is BARCODE_START in .env (default 600001).
+New barcodes (purchase, and raising a quantity on edit) start after the LAST barcode that exists, taken from the stock itself, not from an old hidden counter:
+  - stock imported up to KPI600017: the next purchase starts at KPI600018. (Gaps left by deleted pieces are not filled.)
+  - numbers an old document (sale, rental, return, replacement, upgrade) still points to are never given out again.
+  - BARCODE_START in .env (for example BARCODE_START=900001) moves the series up when the last number is lower than it; empty = no change.
+    With no barcoded piece at all, the first number is BARCODE_START or 600001.   After changing .env:  php artisan config:clear
 New purchase screen shows the exact numbers each row will get; they are final when you press Save.
 Purchase item-details download shows runs like "KPI11, KPI15 to KPI18 (5)".
 Stock import with its own barcodes is unchanged.
+
+
+=====================================================================
+STEP 41k - TASKS (own to-do list + give tasks to staff)
+=====================================================================
+Needs:  php artisan migrate --force      (creates the tasks table and adds who gave the task)
+Left menu > My Tasks.
+  - Add a task: title, due date, optional notes. The Admin (or any login with Tasks > Manage ON) can also choose WHO it is for ("Give it to").
+  - Tabs: Given to me / Given by me / Everybody (managers). Status tabs: Open, Overdue, Due today, Done (with counts). Overdue rows are red.
+  - "Who has what" table (managers): every Admin / SubAdmin with open, overdue, due-today and done counts; click a name to see only that person's tasks.
+  - Done / Open again, Move (reschedule), Edit, Delete. The person it is for, the one who gave it and managers can mark done / move;
+    the one who gave it and managers can edit (including changing who it is for) and delete.
+  - Dashboard: "My tasks overdue" card (red above 0) and a "My tasks due" panel with Done and Move buttons; managers also see how many tasks of the team are overdue.
+Permissions (Users & Permissions > Tasks row): View, Create, Manage team tasks, Complete / reschedule / edit, Delete.
+  Admin has all. SubAdmins keep View, Create, Complete / reschedule / edit and Delete (their own list); switch "Manage team tasks" ON to let a SubAdmin give tasks to others.
+  A SubAdmin needs Tasks > View ON to see the tasks given to him.
+
+
+=====================================================================
+STEP 41l - ACTIVITY LOG (Admin only)   (no migration)
+=====================================================================
+Left menu > Activity Log (only the Admin sees it). Who did what and when: date, user, action (Add / Edit / Delete / Payment / Login / Logout),
+what (purchase, sale invoice, rental challan, return, ...), its number and the details.
+Filters: From / To (default last 7 days), User, Action, What, Search (number, customer, barcode, user), rows per page. Download CSV follows the filters.
+New: from this version every ADD is recorded too (purchase, sale invoice, rental challan / invoice, return, replacement, upgrade, stock import, master
+records, tasks) and every sign-in / sign-out. Edits, deletes and payments were already recorded; older records stay as they were.
+
+
+=====================================================================
+STEP 41m - PAID EXTRAS ARE OFF BY DEFAULT (Activity Log, giving tasks to others)
+=====================================================================
+Both are OFF unless switched on in the server's .env (then  php artisan config:clear ):
+  ACTIVITY_LOG_ENABLED=true   shows Activity Log in the Admin's menu. While it is off the page does not exist (404), but the log is still being recorded,
+                              so when it is switched on the history from the day this version went live is there.
+  TASK_ASSIGN_ENABLED=true    lets the Admin (and any login with Tasks > Manage) give a task to another login, see "Who has what", "Given by me" and "Everybody",
+                              and shows "Manage team tasks" on the Users & Permissions page.
+While it is off, everybody has only his own task list (the Admin too), and the Manage switch is hidden.
