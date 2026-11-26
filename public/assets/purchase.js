@@ -104,7 +104,7 @@
     var pick = document.getElementById('pickfile'), pickMode = null, pickRow = null;
     function uploadTo(file, done) {
         var fd = new FormData(), tok = document.querySelector('#pf input[name=_token]');
-        fd.append('_token', tok ? tok.value : ''); fd.append('file', file);
+        fd.append('_token', tok ? tok.value : ''); fd.append('file', file); fd.append('mode', pickMode === 'tags' ? 'tags' : 'rows');
         fetch(C.importUrl, { method: 'POST', body: fd, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
             .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
             .then(function (x) { if (!x.ok || !x.j.ok) { alert((x.j && (x.j.error || x.j.message)) || 'The file could not be read.'); return; } done(x.j); })

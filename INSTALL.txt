@@ -534,3 +534,21 @@ Both are OFF unless switched on in the server's .env (then  php artisan config:c
   TASK_ASSIGN_ENABLED=true    lets the Admin (and any login with Tasks > Manage) give a task to another login, see "Who has what", "Given by me" and "Everybody",
                               and shows "Manage team tasks" on the Users & Permissions page.
 While it is off, everybody has only his own task list (the Admin too), and the Manage switch is hidden.
+
+
+STEP 41n - SAMPLE FILE FOR PURCHASE BRAND-TAG IMPORT   (no migration)
+New purchase > "Download sample file" (next to "Import items from file"): a CSV with the columns Model/Product, Brand Tag, Config, HSN, Rate and example rows
+made from real items of the Item master (tags are examples; replace them). Works for "Import items from file" and "Import tags from file".
+
+
+STEP 41o - BRAND TAGS ONLY IMPORT   (no migration)
+"Import tags from file" (and "Import items from file") also accept a file with only brand tags, in any of these shapes:
+  - a "Brand Tag" column, one tag per row;
+  - no headings at all: "ABC1, ABC2, ABC3" on one line (comma separated), one tag per line, or a mix; a cell may hold several tags separated by , ; or a new line.
+All tags go into one row (duplicates removed, qty = number of tags); choose the item on the screen.
+"Download brand tags sample" gives purchase-brand-tags-sample.csv. Typing or pasting comma-separated tags into the Brand Tag box always worked too.
+
+STEP 41p - "Import tags from file" ignores the model names in the file
+On one row, "Import tags from file" now reads only the "Brand Tag" column (heading may be written Brand Tag / Brand tag / Tag / Serial No); the Model/Product names in the file no longer
+have to match the item. (Before, a file whose model name differed from the Item master name was skipped and ended with "No brand tags were found".)
+"Import items from file" still needs the Model/Product names to match the Item master exactly.

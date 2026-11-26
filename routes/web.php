@@ -100,6 +100,7 @@ Route::middleware(['auth', 'role'])->group(function () {
         Route::middleware('perm:purchase.create')->group(function () {
             Route::get('/purchase/new', [PurchaseController::class, 'create'])->name('purchase.create');
             Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
+            Route::get('/purchase/import-sample', [PurchaseController::class, 'importSample'])->name('purchase.import.sample');
             Route::post('/purchase/import-rows', [PurchaseController::class, 'importRows'])->name('purchase.import');
             Route::post('/purchase/quick-item', [PurchaseController::class, 'quickItem'])->name('purchase.quick-item');
         });

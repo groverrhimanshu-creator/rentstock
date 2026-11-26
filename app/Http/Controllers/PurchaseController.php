@@ -89,6 +89,41 @@ class PurchaseController extends Controller
      * Model/Product (an item of the Item master), Brand Tag, Config, HSN, Rate. Pieces with the same item, config, HSN and rate become one row.
      * By-quantity items add up a "Quantity" column (1 when empty).
      */
+    /* "Download sample file": the columns the purchase import reads, with example rows made from real items of the Item master. */
+    public function importSample(Request $request)
+    {
+        if ($request->query('type') === 'tags') {
+            $rows = [['Brand Tag']];
+            for ($i = 1; $i <= 10; $i++) {
+                $rows[] = ['ABC' . (1000 + $i)];
+            }
+            return response()->streamDownload(function () use ($rows) {
+                echo "\xEF\xBB\xBF";
+                foreach ($rows as $r) {
+                    echo '"' . $r[0] . "\"\r\n";
+                }
+            }, 'purchase-brand-tags-sample.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
+        $rows = [['Model/Product', 'Brand Tag', 'Config', 'HSN', 'Rate']];
+        $items = DB::table('items')->where('tracked', 1)->orderBy('id')->limit(2)->get(['name', 'hsn']);
+        $n = 1;
+        foreach ($items as $it) {
+            for ($i = 0; $i < 3; $i++) {
+                $rows[] = [$it->name, 'ABC' . (1000 + $n++), $it->name, $it->hsn ?: '8471', '25000'];
+            }
+        }
+        if (count($rows) === 1) {
+            $rows[] = ['Latitude 7490', 'ABC1001', 'i5/8th/16gb/256', '8471', '25000'];
+            $rows[] = ['Latitude 7490', 'ABC1002', 'i5/8th/16gb/256', '8471', '25000'];
+        }
+        return response()->streamDownload(function () use ($rows) {
+            echo "\xEF\xBB\xBF";
+            foreach ($rows as $r) {
+                echo implode(',', array_map(fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"', $r)) . "\r\n";
+            }
+        }, 'purchase-import-sample.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     public function importRows(Request $request)
     {
         $bad = fn (string $m) => response()->json(['ok' => false, 'error' => $m], 422);
@@ -111,8 +146,8 @@ class PurchaseController extends Controller
         } catch (RuntimeException $e) {
             return $bad($e->getMessage());
         }
-        if (count($table) < 2) {
-            return $bad('The file has no data rows.');
+        if (count($table) < 1) {
+            return $bad('The file is empty.');
         }
         $alias = ['item' => ['modelproduct', 'model', 'product', 'productname', 'itemname', 'item', 'name'], 'tag' => ['brandtag', 'tag', 'srno', 'serialno', 'serial'],
             'config' => ['config', 'configuration'], 'hsn' => ['hsncode', 'hsn'], 'rate' => ['rate', 'price', 'purchaseprice', 'purchaserate'], 'qty' => ['quantity', 'qty']];
@@ -125,8 +160,42 @@ class PurchaseController extends Controller
                 }
             }
         }
-        if (!isset($idx['item'])) {
-            return $bad('The first row must be the column names. The column "Model/Product" was not found. Columns: Model/Product, Brand Tag, Config, HSN, Rate, Quantity.');
+        $tagsMode = $request->input('mode') === 'tags';   // "Import tags from file" on one row: only the tags are wanted, the model names in the file do not matter
+        if ($tagsMode && !isset($idx['tag']) && isset($idx['item'])) {
+            return $bad('This file has no "Brand Tag" column. Add a column named Brand Tag with one tag in each row.');
+        }
+        if (!isset($idx['item']) || $tagsMode) {
+            // Brand tags only. Either a "Brand Tag" column (one tag per row), or no headings at all: then every cell of the file is read,
+            // so "ABC1, ABC2, ABC3" on one line, one tag per line, or a mix all work. A cell may also hold several tags separated by , ; or a new line.
+            $cells = [];
+            if (isset($idx['tag'])) {
+                foreach (array_slice($table, 1, 5000) as $r) {
+                    $cells[] = (string) ($r[$idx['tag']] ?? '');
+                }
+            } else {
+                foreach (array_slice($table, 0, 5000) as $r) {
+                    foreach ($r as $c) {
+                        $cells[] = (string) $c;
+                    }
+                }
+            }
+            $tags = [];
+            foreach ($cells as $c) {
+                foreach (preg_split('/[,;\n\r]+/', $c) as $t) {
+                    $t = mb_substr(trim($t), 0, 60);
+                    if ($t !== '') {
+                        $tags[$t] = true;
+                    }
+                }
+            }
+            if (!$tags) {
+                return $bad('No brand tags were found in the file.');
+            }
+            return response()->json(['ok' => true, 'rows' => count($tags), 'unknown' => [], 'unknown_count' => 0, 'missing_tags' => 0,
+                'lines' => [['item_id' => '', 'config' => '', 'hsn' => '', 'rate' => '', 'bc' => 'yes', 'qty' => count($tags), 'tags' => implode(', ', array_keys($tags))]]]);
+        }
+        if (count($table) < 2) {
+            return $bad('The file has no data rows.');
         }
         $key = fn (string $s) => mb_strtolower(trim(preg_replace('/\s+/u', ' ', $s)));
         $items = [];
