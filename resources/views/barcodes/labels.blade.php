@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title> </title>
 <style>
-:root{--w:{{ $w }}mm;--h:{{ $h }}mm;--gap:{{ $gap }}mm;--s:{{ round(min($w / 50, $h / 25), 2) }};--dx:0mm;--dy:0mm}
+:root{--pw:{{ $cols * $w + ($cols - 1) * $gap }}mm;--w:{{ $w }}mm;--h:{{ $h }}mm;--gap:{{ $gap }}mm;--s:{{ round(min($w / 50, $h / 25), 2) }};--dx:0mm;--dy:0mm}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
 .bar{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1px solid #ddd;padding:10px 14px;display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;font-size:13px}
 .bar button{padding:7px 16px;border:0;border-radius:4px;background:#F28C0F;color:#fff;cursor:pointer;font-size:13px}
@@ -12,7 +12,8 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
 .bar input{width:64px;padding:4px 6px;border:1px solid #cfd6e4;border-radius:4px;font-size:13px}
 .bar .help{flex-basis:100%;color:#555;font-size:12px}
 .sheet{padding:14px}
-.row{display:flex;gap:var(--gap);width:max-content;margin-bottom:10px;position:relative;left:var(--dx);top:var(--dy)}
+.row{display:flex;gap:var(--gap);width:var(--pw);margin-bottom:10px;position:relative;left:var(--dx);top:var(--dy);justify-content:flex-start}
+.lab.blank{visibility:hidden}
 .lab{background:#fff;color:#000;border:1px dashed #999;box-sizing:border-box;width:var(--w);height:var(--h);padding:calc(.8mm * var(--s)) calc(1.2mm * var(--s));text-align:center;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;flex:none}
 .lab svg{display:block;width:calc(var(--w) - 4mm) !important;height:calc(8mm * var(--s)) !important}
 .lab .t1{font:bold calc(8pt * var(--s)) Arial,sans-serif;letter-spacing:.04em;line-height:1.1;white-space:nowrap}
@@ -62,7 +63,7 @@ body.testmode #testrow{display:flex}
     function apply() {
         v.cols = Math.round(num(v.cols, D.cols, 1, 4)); v.w = num(v.w, D.w, 20, 120); v.h = num(v.h, D.h, 15, 100); v.gap = num(v.gap, D.gap, 0, 20); v.dx = num(v.dx, 0, -20, 20); v.dy = num(v.dy, 0, -20, 20); v.z = num(v.z, 100, 50, 200);
         var r = document.documentElement.style;
-        r.setProperty('--w', v.w + 'mm'); r.setProperty('--h', v.h + 'mm'); r.setProperty('--gap', v.gap + 'mm'); r.setProperty('--dx', v.dx + 'mm'); r.setProperty('--dy', v.dy + 'mm');
+        r.setProperty('--pw', (Math.round((v.cols * v.w + (v.cols - 1) * v.gap) * 10) / 10) + 'mm'); r.setProperty('--w', v.w + 'mm'); r.setProperty('--h', v.h + 'mm'); r.setProperty('--gap', v.gap + 'mm'); r.setProperty('--dx', v.dx + 'mm'); r.setProperty('--dy', v.dy + 'mm');
         r.setProperty('--s', Math.round(Math.min(v.w / 50, v.h / 25) * v.z) / 100);
         var pw = Math.round((v.cols * v.w + (v.cols - 1) * v.gap) * 10) / 10;
         document.getElementById('pagecss').textContent = '@page{size:' + pw + 'mm ' + v.h + 'mm;margin:0}';
@@ -77,6 +78,8 @@ body.testmode #testrow{display:flex}
             if (i % v.cols === 0) { row = document.createElement('div'); row.className = 'row'; sheet.appendChild(row); }
             row.appendChild(l.cloneNode(true));
         });
+        // the last row is filled up with empty stickers, so a single label stays on the FIRST sticker of the row instead of drifting to the middle
+        if (labs.length && labs.length % v.cols) { for (var e = labs.length % v.cols; e < v.cols; e++) { var bl = document.createElement('div'); bl.className = 'lab blank'; row.appendChild(bl); } }
     }
     document.getElementById('o-test').addEventListener('click', function () { document.body.classList.add('testmode'); window.print(); });
     window.addEventListener('afterprint', function () { document.body.classList.remove('testmode'); });

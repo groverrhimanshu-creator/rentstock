@@ -564,3 +564,6 @@ the print window's "More settings > Headers and footers" must be OFF (Chrome/Edg
 
 STEP 41s - label content bigger (barcode 8 mm high and 44+ mm wide, larger text) + "Content size (%)" box on the label page (50-200, default 100); saved key reset again.
 If the printout is still small, the printer / print window is scaling the page down: set Scale 100% (not "Fit to page") and the paper size to 100 x 25 mm.
+
+STEP 41t - label rows keep the full row width (cols x label width) and are filled up with empty stickers, so a single label (or the last odd one) prints on the first sticker of the row,
+not in the middle between two stickers. Each label is centred on its own sticker.
