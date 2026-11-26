@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Barcode labels</title>
+<title> </title>
 <style>
 :root{--w:{{ $w }}mm;--h:{{ $h }}mm;--gap:{{ $gap }}mm;--s:{{ round(min($w / 50, $h / 25), 2) }};--dx:0mm;--dy:0mm}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
@@ -14,12 +14,12 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f2f5}
 .sheet{padding:14px}
 .row{display:flex;gap:var(--gap);width:max-content;margin-bottom:10px;position:relative;left:var(--dx);top:var(--dy)}
 .lab{background:#fff;color:#000;border:1px dashed #999;box-sizing:border-box;width:var(--w);height:var(--h);padding:calc(.8mm * var(--s)) calc(1.2mm * var(--s));text-align:center;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;flex:none}
-.lab svg{display:block;width:calc(var(--w) - 6mm) !important;height:calc(6.6mm * var(--s)) !important}
-.lab .t1{font:bold calc(6.2pt * var(--s)) Arial,sans-serif;letter-spacing:.04em;line-height:1.1;white-space:nowrap}
-.lab .t2{font:bold calc(7pt * var(--s)) 'Courier New',monospace;line-height:1.1;letter-spacing:.02em;margin-top:.3mm}
-.lab .t3{font:calc(5.2pt * var(--s)) Arial,sans-serif;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.lab .t4{font:calc(5.2pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
-.lab .t5{font:bold calc(5.6pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lab svg{display:block;width:calc(var(--w) - 4mm) !important;height:calc(8mm * var(--s)) !important}
+.lab .t1{font:bold calc(8pt * var(--s)) Arial,sans-serif;letter-spacing:.04em;line-height:1.1;white-space:nowrap}
+.lab .t2{font:bold calc(10pt * var(--s)) 'Courier New',monospace;line-height:1.1;letter-spacing:.02em;margin-top:.3mm}
+.lab .t3{font:calc(7pt * var(--s)) Arial,sans-serif;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lab .t4{font:calc(7pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.lab .t5{font:bold calc(7.5pt * var(--s)) Arial,sans-serif;line-height:1.12;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #pool{display:none}
 #testrow{display:none;gap:var(--gap);left:var(--dx);top:var(--dy);position:relative;width:max-content}
 .tl{box-sizing:border-box;width:var(--w);height:var(--h);border:.4mm solid #000;display:flex;align-items:center;justify-content:center;text-align:center;font:bold 7pt Arial,sans-serif;background:linear-gradient(#000,#000) center/100% .15mm no-repeat,linear-gradient(#000,#000) center/.15mm 100% no-repeat;flex:none}
@@ -35,12 +35,14 @@ body.testmode #testrow{display:flex}
     <label>Labels across<input id="o-cols" type="number" min="1" max="4" step="1" value="{{ $cols }}"></label>
     <label>Label width (mm)<input id="o-w" type="number" min="20" max="120" step="0.5" value="{{ $w }}"></label>
     <label>Label height (mm)<input id="o-h" type="number" min="15" max="100" step="0.5" value="{{ $h }}"></label>
+    <label>Content size (%)<input id="o-z" type="number" min="50" max="200" step="5" value="100"></label>
     <label>Gap between (mm)<input id="o-gap" type="number" min="0" max="20" step="0.5" value="{{ $gap }}"></label>
     <label>Move right (mm)<input id="o-dx" type="number" min="-20" max="20" step="0.5" value="0"></label>
     <label>Move down (mm)<input id="o-dy" type="number" min="-20" max="20" step="0.5" value="0"></label>
     <button type="button" class="g" id="o-reset">Reset</button>
     <button type="button" class="g" id="o-test">Test print (outlines)</button>
     @if ($back)<a href="{{ $back }}">Back</a>@else<a href="javascript:window.close()">Close</a>@endif
+    <div class="help" style="background:#FFF4E0;border:1px solid #F28C0F;border-radius:4px;padding:6px 10px;color:#5a3a00"><b>Before you print:</b> in the print window open <b>More settings</b>, switch <b>Headers and footers OFF</b> (this removes the date, the page title and the web link from the label), set <b>Margins: None</b> and <b>Scale: 100%</b>. Your browser remembers this for the next time.</div>
     <div class="help"><b>Not sitting right?</b> Press "Test print" and print it on one row of the roll: each box should sit exactly inside one label, and the cross should hit the middle. Change width, height, gap and Move right/down until it does, then print the real labels. Match these to your label roll (measure one label and the gap). Settings are remembered on this computer. In the print window choose your label printer, set the paper size to <b id="o-page"></b> mm, margins None, scale 100%.</div>
 </div>
 <div class="sheet"><div id="testrow"></div><div id="sheet"></div></div>
@@ -52,16 +54,16 @@ body.testmode #testrow{display:flex}
 </div>
 <script>
 (function () {
-    var KEY = 'rs_label_v2', D = { cols: {{ $cols }}, w: {{ $w }}, h: {{ $h }}, gap: {{ $gap }}, dx: 0, dy: 0 };
-    var ids = ['cols', 'w', 'h', 'gap', 'dx', 'dy'], v = {};
+    var KEY = 'rs_label_v3', D = { cols: {{ $cols }}, w: {{ $w }}, h: {{ $h }}, gap: {{ $gap }}, dx: 0, dy: 0, z: 100 };
+    var ids = ['cols', 'w', 'h', 'gap', 'dx', 'dy', 'z'], v = {};
     function load() { var s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {} ids.forEach(function (k) { v[k] = typeof s[k] === 'number' ? s[k] : D[k]; }); }
     function save() { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
     function num(x, d, lo, hi) { x = parseFloat(x); if (isNaN(x)) { x = d; } return Math.min(hi, Math.max(lo, x)); }
     function apply() {
-        v.cols = Math.round(num(v.cols, D.cols, 1, 4)); v.w = num(v.w, D.w, 20, 120); v.h = num(v.h, D.h, 15, 100); v.gap = num(v.gap, D.gap, 0, 20); v.dx = num(v.dx, 0, -20, 20); v.dy = num(v.dy, 0, -20, 20);
+        v.cols = Math.round(num(v.cols, D.cols, 1, 4)); v.w = num(v.w, D.w, 20, 120); v.h = num(v.h, D.h, 15, 100); v.gap = num(v.gap, D.gap, 0, 20); v.dx = num(v.dx, 0, -20, 20); v.dy = num(v.dy, 0, -20, 20); v.z = num(v.z, 100, 50, 200);
         var r = document.documentElement.style;
         r.setProperty('--w', v.w + 'mm'); r.setProperty('--h', v.h + 'mm'); r.setProperty('--gap', v.gap + 'mm'); r.setProperty('--dx', v.dx + 'mm'); r.setProperty('--dy', v.dy + 'mm');
-        r.setProperty('--s', Math.round(Math.min(v.w / 50, v.h / 25) * 100) / 100);
+        r.setProperty('--s', Math.round(Math.min(v.w / 50, v.h / 25) * v.z) / 100);
         var pw = Math.round((v.cols * v.w + (v.cols - 1) * v.gap) * 10) / 10;
         document.getElementById('pagecss').textContent = '@page{size:' + pw + 'mm ' + v.h + 'mm;margin:0}';
         document.getElementById('o-page').textContent = pw + ' x ' + v.h;

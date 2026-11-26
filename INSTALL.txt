@@ -558,3 +558,9 @@ STEP 41q - 2-UP LABEL ROLL (TSC TE244, 50 x 25 mm, 2 across, no gap)
 Barcode label page now starts at 2 labels across, 50 x 25 mm, gap 0 (page 100 x 25 mm, one row per page). Sizes saved in a browser earlier are cleared once (new save key),
 so the new defaults show. Change here if a roll differs: LABEL_COLS, LABEL_GAP in .env, label.w / label.h in config/rentstock.php.
 Printing: choose the TSC TE244 printer, paper size 100 x 25 mm (define it in the printer's Preferences > Paper once), Margins None, Scale 100%, headers and footers OFF.
+
+STEP 41r - label page: tip to switch off browser headers/footers (date, title, link) and an empty page title. A website cannot switch these off by itself in every browser;
+the print window's "More settings > Headers and footers" must be OFF (Chrome/Edge). Firefox: Print > Page Setup > Margins & Header/Footer > all "--Blank--".
+
+STEP 41s - label content bigger (barcode 8 mm high and 44+ mm wide, larger text) + "Content size (%)" box on the label page (50-200, default 100); saved key reset again.
+If the printout is still small, the printer / print window is scaling the page down: set Scale 100% (not "Fit to page") and the paper size to 100 x 25 mm.
