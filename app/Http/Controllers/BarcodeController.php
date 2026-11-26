@@ -121,7 +121,7 @@ class BarcodeController extends Controller
         $w = max(30.0, (float) config('rentstock.label.w', 50));
         $h = max(18.0, (float) config('rentstock.label.h', 25));
         $cols = min(4, max(1, (int) config('rentstock.label.cols', 2)));
-        $gap = max(0.0, (float) config('rentstock.label.gap', 3));
+        $gap = max(0.0, (float) config('rentstock.label.gap', 0));
         return view('barcodes.labels', ['w' => $w, 'h' => $h, 'cols' => $cols, 'gap' => $gap, 'title' => trim((string) config('rentstock.label.title', '')), 'labels' => $labels, 'prefix' => Barcodes::prefix(), 'withConfig' => $withConfig, 'back' => $back, 'saved' => $saved]);
     }
 }

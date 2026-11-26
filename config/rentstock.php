@@ -34,7 +34,7 @@ return [
         'w' => (float) env('LABEL_W', 50),
         'h' => (float) env('LABEL_H', 25),
         'cols' => (int) env('LABEL_COLS', 2),     // labels side by side on the roll
-        'gap' => (float) env('LABEL_GAP', 3),     // space between two labels side by side, mm
+        'gap' => (float) env('LABEL_GAP', 0),     // space between two labels side by side, mm (0 = labels touch, as on a 2-up roll)
     ],
 
 ];

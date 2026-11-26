@@ -52,7 +52,7 @@ body.testmode #testrow{display:flex}
 </div>
 <script>
 (function () {
-    var KEY = 'rs_label_v1', D = { cols: {{ $cols }}, w: {{ $w }}, h: {{ $h }}, gap: {{ $gap }}, dx: 0, dy: 0 };
+    var KEY = 'rs_label_v2', D = { cols: {{ $cols }}, w: {{ $w }}, h: {{ $h }}, gap: {{ $gap }}, dx: 0, dy: 0 };
     var ids = ['cols', 'w', 'h', 'gap', 'dx', 'dy'], v = {};
     function load() { var s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {} ids.forEach(function (k) { v[k] = typeof s[k] === 'number' ? s[k] : D[k]; }); }
     function save() { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
