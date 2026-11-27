@@ -6,9 +6,16 @@
     function d(ymd) { return ymd ? ymd.split('-').reverse().join('/') : ''; }
     function get(url) { return fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
 
+    var seq = 0;
+    /* ticked items go to the top (the one ticked last first), so they are seen at once without scrolling a long list */
+    function sorted() {
+        var on = rows.filter(function (x) { return x.on; }).sort(function (a, b) { return (b.ord || 0) - (a.ord || 0); });
+        return on.concat(rows.filter(function (x) { return !x.on; }));
+    }
+    function top() { var w = $('rows').closest('.tw'); if (w) { w.scrollTop = 0; } }
     function paint() {
         $('out-count').textContent = rows.length;
-        $('rows').innerHTML = rows.length ? rows.map(function (x) {
+        $('rows').innerHTML = rows.length ? sorted().map(function (x) {
             var on = !!x.on, dis = on ? '' : ' disabled', n = 'items[' + x.code + ']';
             return '<tr><td><input type="checkbox" data-sel="' + x.code + '"' + (on ? ' checked' : '') + '></td><td class="bc">' + esc(x.bc) + '</td><td>' + esc(x.model) + '</td><td>' + d(x.rented_at) + '</td>' +
                 '<td><select name="' + n + '[reason]" data-f="reason" data-c="' + x.code + '"' + dis + '>' + C.reasons.map(function (r) { return '<option' + (x.reason === r ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('') + '</select></td>' +
@@ -20,19 +27,19 @@
     function find(c) { return rows.filter(function (x) { return String(x.code) === String(c); })[0]; }
     $('rows').addEventListener('change', function (e) {
         var t = e.target, c = t.getAttribute('data-sel');
-        if (c != null) { find(c).on = t.checked; paint(); return; }
+        if (c != null) { var r0 = find(c); r0.on = t.checked; r0.ord = t.checked ? ++seq : 0; paint(); top(); return; }
         var f = t.getAttribute('data-f');
         if (f) { find(t.getAttribute('data-c'))[f] = t.value; if (f === 'cond') { paint(); } }
     });
     $('rows').addEventListener('input', function (e) { var t = e.target; if (t.getAttribute('data-f') === 'note') { find(t.getAttribute('data-c')).note = t.value; } });
-    $('selall').addEventListener('click', function () { rows.forEach(function (x) { x.on = true; }); paint(); });
-    $('selnone').addEventListener('click', function () { rows.forEach(function (x) { x.on = false; }); paint(); });
+    $('selall').addEventListener('click', function () { rows.forEach(function (x) { if (!x.on) { x.on = true; x.ord = ++seq; } }); paint(); top(); });
+    $('selnone').addEventListener('click', function () { rows.forEach(function (x) { x.on = false; x.ord = 0; }); paint(); top(); });
     function tick() {
         var q = $('scan').value.trim().toUpperCase().replace(/\s+/g, ''), p = C.prefix.toUpperCase();
         if (q.indexOf(p) === 0) { q = q.slice(p.length); }
         var x = /^\d{4,9}$/.test(q) ? find(q) : null;
         if (!x) { err('This barcode is not on rent with this customer.'); return; }
-        err(''); x.on = true; paint(); $('scan').value = ''; $('scan').focus();
+        err(''); if (!x.on) { x.on = true; x.ord = ++seq; } paint(); top(); $('scan').value = ''; $('scan').focus();
     }
     $('scanbtn').addEventListener('click', tick);
     $('scan').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); tick(); } });

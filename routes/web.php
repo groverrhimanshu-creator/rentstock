@@ -145,6 +145,7 @@ Route::middleware(['auth', 'role'])->group(function () {
 
         // Replacement
         Route::get('/replacement', [ReplacementController::class, 'index'])->middleware('perm:replacement.view')->name('replacement.index');
+        Route::get('/replacement/{id}', [ReplacementController::class, 'show'])->whereNumber('id')->middleware('perm:replacement.view')->name('replacement.show');
         Route::get('/replacement/new', [ReplacementController::class, 'create'])->middleware('perm:replacement.create')->name('replacement.create');
         Route::get('/replacement/data', [ReplacementController::class, 'data'])->middleware('perm:replacement.create')->name('replacement.data');
         Route::post('/replacement', [ReplacementController::class, 'store'])->middleware('perm:replacement.create')->name('replacement.store');

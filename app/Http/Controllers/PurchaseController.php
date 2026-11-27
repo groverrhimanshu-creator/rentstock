@@ -336,7 +336,7 @@ class PurchaseController extends Controller
 
         [$id, $added] = Purchases::create([
             'supplier_id' => $supplierId, 'inv_no' => mb_substr(trim((string) $request->input('inv_no', '')), 0, 60), 'inv_date' => $date,
-            'type' => $type, 'pay_mode' => $pay, 'store_id' => $storeId, 'lines' => $lines,
+            'type' => $type, 'pay_mode' => $pay, 'store_id' => $storeId, 'lines' => $lines, 'remark' => mb_substr(trim((string) $request->input('remark', '')), 0, 255),
         ], $request->user()->id);
 
         if ($file) {
@@ -479,7 +479,7 @@ class PurchaseController extends Controller
                 'supplier_id' => $supplierId, 'inv_no' => mb_substr(trim((string) $request->input('inv_no', '')), 0, 60), 'inv_date' => $date,
                 'type' => $request->input('type') === 'Bill of supply' ? 'Bill of supply' : 'GST',
                 'pay_mode' => in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : 'Cash',
-                'store_id' => $storeId, 'lines' => $lines, 'remove' => $remove, 'add' => $add,
+                'store_id' => $storeId, 'remark' => mb_substr(trim((string) $request->input('remark', '')), 0, 255), 'lines' => $lines, 'remove' => $remove, 'add' => $add,
             ], $request->user()->id);
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());

@@ -257,7 +257,12 @@ class Rentals
         $items = DB::table('items as i')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')
             ->whereIn('i.id', array_unique(array_column($rows, 'item_id')))->get(['i.id', 'i.name', 'c.name as cat'])->keyBy('id');
         $prefix = Barcodes::prefix();
+        $lastRet = [];   // the day a piece last came back, when it is no longer with the customer
+        foreach ($segs as $sg) {
+            $lastRet[$sg['code']] = $sg['returned'] ? substr((string) $sg['returned'], 0, 10) : null;
+        }
         foreach ($rows as &$x) {
+            $x['returned'] = $lastRet[$x['code']] ?? null;
             $it = $items[$x['item_id']];
             $x['bc'] = $prefix . $x['code'];
             $x['name'] = $it->name;

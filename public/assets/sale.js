@@ -21,7 +21,7 @@
         var order = [], map = {};
         rentRows.forEach(function (x) {
             if (!map[x.g]) { map[x.g] = { g: x.g, cat: x.cat || x.name, models: [], codes: [], price: x.price, n: 0 }; order.push(map[x.g]); }
-            var g = map[x.g]; g.n++; g.codes.push(x.bc);
+            var g = map[x.g]; g.n++; g.codes.push(x.ret ? x.bc + ' (returned ' + x.ret.split('-').reverse().join('/') + ', ' + x.days + ' of ' + x.P + ' days)' : x.bc);
             if (g.models.indexOf(x.name) < 0) { g.models.push(x.name); }
         });
         return order;
@@ -36,6 +36,9 @@
         $('sel-empty').textContent = ri ? ($('customer').value ? 'No items in the list. Use "List items on rent again" to bring them back.' : '') : 'No items selected yet.';
         $('sel-empty').hidden = total > 0 || (ri && !$('customer').value);
         $('sel-table').hidden = !total;
+        var anyRet = ri && rentRows.some(function (x) { return x.ret; }), rn = $('ret-note');
+        if (!rn) { rn = document.createElement('p'); rn.id = 'ret-note'; rn.className = 'hint'; $('sel-table').parentNode.insertBefore(rn, $('sel-table').nextSibling); }
+        rn.hidden = !anyRet; rn.textContent = anyRet ? 'Pieces marked "returned" came back inside this billing period. They are billed only for the days they were out, and are no longer with the customer.' : '';
         $('sel-head').innerHTML = '<tr><th>Barcode</th><th>Item</th><th>HSN/SAC</th><th class="num">Qty</th><th>' + (ri ? 'Price (each)' : 'Price') + '</th><th></th></tr>';
         if (ri && groups.length) {
             if (lines.length) { rows += '<tr class="sec"><td colspan="6"><b>Rent</b></td></tr>'; }
@@ -282,7 +285,7 @@
             err(r.rows.length ? '' : (r.note || ''));
             if (!r.rows.length && r.suggest) { sug = r.suggest; $('usedates').hidden = false; }
             rentRows = r.rows.map(function (x) {
-                return { code: x.code, bc: x.bc, item_id: x.item_id, name: x.name, cat: x.cat, g: (x.cat || x.name) + '|' + x.price, price: oldPrices[x.code] != null ? oldPrices[x.code] : x.price };
+                return { code: x.code, bc: x.bc, ret: x.returned || '', days: x.days, P: x.P, item_id: x.item_id, name: x.name, cat: x.cat, g: (x.cat || x.name) + '|' + x.price, price: oldPrices[x.code] != null ? oldPrices[x.code] : x.price };
             });
             oldPrices = {};
             render();

@@ -9,6 +9,7 @@
         <div class="fg">
             <label class="f"><span>Supplier</span><select name="supplier_id" id="supplier"><option value="">Select</option>@foreach ($suppliers as $s)<option value="{{ $s->id }}" data-state="{{ $s->state_code }}" @selected((string) old('supplier_id') === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>
             <label class="f"><span>Supplier invoice no</span><input name="inv_no" value="{{ old('inv_no') }}" maxlength="60"></label>
+            <label class="f"><span>Remark</span><input name="remark" value="{{ old('remark') }}" maxlength="255"></label>
             <label class="f"><span>Invoice date</span><input type="date" name="inv_date" value="{{ old('inv_date') }}"></label>
             <label class="f"><span>Type</span><select name="type" id="type">@foreach (['GST', 'Bill of supply'] as $o)<option @selected(old('type', 'GST') === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Payment mode</span><select name="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', 'Cash') === $o)>{{ $o }}</option>@endforeach</select></label>

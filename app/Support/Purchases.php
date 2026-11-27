@@ -27,7 +27,7 @@ class Purchases
             $supplier = (string) DB::table('suppliers')->where('id', $d['supplier_id'])->value('name');
             $pid = DB::table('purchases')->insertGetId([
                 'no' => Numbers::purchase(), 'supplier_id' => $d['supplier_id'], 'inv_no' => $d['inv_no'], 'inv_date' => $d['inv_date'] ?: null,
-                'type' => $d['type'], 'pay_mode' => $d['pay_mode'], 'store_id' => $d['store_id'], 'user_id' => $userId, 'created_at' => now(),
+                'type' => $d['type'], 'pay_mode' => $d['pay_mode'], 'store_id' => $d['store_id'], 'remark' => (string) ($d['remark'] ?? ''), 'user_id' => $userId, 'created_at' => now(),
             ]);
             $added = 0;
             foreach ($d['lines'] as $l) {
@@ -187,7 +187,7 @@ class Purchases
             }
             DB::table('purchases')->where('id', $id)->update([
                 'supplier_id' => $d['supplier_id'], 'inv_no' => $d['inv_no'], 'inv_date' => $d['inv_date'] ?: null,
-                'type' => $d['type'], 'pay_mode' => $d['pay_mode'], 'store_id' => $d['store_id'],
+                'type' => $d['type'], 'pay_mode' => $d['pay_mode'], 'store_id' => $d['store_id'], 'remark' => (string) ($d['remark'] ?? ''),
             ]);
             if ((int) $old->store_id !== (int) $d['store_id']) {
                 // Pieces still on the shelf move to the new store.

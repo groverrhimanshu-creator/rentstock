@@ -29,6 +29,20 @@ class ReplacementController extends Controller
         return view('replacement.index', compact('rows', 'q', 'n', 'prefix'));
     }
 
+    public function show(int $id)
+    {
+        $r = DB::table('replacements as r')->join('customers as c', 'c.id', '=', 'r.customer_id')->where('r.id', $id)
+            ->first(['r.*', 'c.name as cname', 'c.address', 'c.city', 'c.state', 'c.state_code', 'c.gstin', 'c.phone']);
+        abort_unless($r, 404);
+        $dev = fn ($code) => DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->leftJoin('categories as ct', 'ct.id', '=', 'i.category_id')
+            ->where('d.code', $code)->first(['d.code', 'd.config', 'd.brand_tag', 'd.status', 'i.name as model', 'ct.name as cat']);
+        $old = $dev($r->old_code);
+        $new = $dev($r->new_code);
+        $company = DB::table('company_profile')->where('id', 1)->first();
+        $user = $r->user_id ? (string) DB::table('users')->where('id', $r->user_id)->value('name') : '';
+        return view('replacement.show', ['r' => $r, 'old' => $old, 'new' => $new, 'company' => $company, 'prefix' => Barcodes::prefix(), 'user' => $user]);
+    }
+
     public function create()
     {
         return view('replacement.form', [
@@ -52,7 +66,7 @@ class ReplacementController extends Controller
         $out = ['olds' => [], 'info' => null, 'same' => [], 'cat' => [], 'catTotal' => 0];
         if ($cid) {
             $out['olds'] = DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->where('d.customer_id', $cid)->where('d.status', $sold ? 'sold' : 'rented')
-                ->orderBy('d.code')->limit(1000)->get(['d.code', 'i.name as model'])
+                ->orderBy('d.code')->limit(5000)->get(['d.code', 'i.name as model'])
                 ->map(fn ($r) => ['code' => (int) $r->code, 'label' => $prefix . $r->code . ' · ' . $r->model])->all();
         }
         $old = (int) $request->query('old');
@@ -63,11 +77,11 @@ class ReplacementController extends Controller
                 $out['info'] = ['model' => $od->name, 'cat' => (string) ($od->cat ?? ''), 'category_id' => (int) ($od->category_id ?? 0)];
                 $shape = fn ($r) => ['code' => (int) $r->code, 'label' => $prefix . $r->code . ' · ' . $r->model . ' · ' . $r->config];
                 $base = DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->where('d.status', 'in_stock')->orderBy('d.code');
-                $out['same'] = (clone $base)->where('d.item_id', $od->item_id)->limit(500)->get(['d.code', 'd.config', 'i.name as model'])->map($shape)->all();
+                $out['same'] = (clone $base)->where('d.item_id', $od->item_id)->limit(3000)->get(['d.code', 'd.config', 'i.name as model'])->map($shape)->all();
                 if ($od->category_id) {
                     $cq = (clone $base)->where('d.item_id', '!=', $od->item_id)->where('i.category_id', $od->category_id);
                     $out['catTotal'] = (clone $cq)->count();
-                    $out['cat'] = $cq->limit(500)->get(['d.code', 'd.config', 'i.name as model'])->map($shape)->all();
+                    $out['cat'] = $cq->limit(3000)->get(['d.code', 'd.config', 'i.name as model'])->map($shape)->all();
                 }
             }
         }

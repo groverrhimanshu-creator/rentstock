@@ -17,7 +17,7 @@
     <div class="three">
         @include('partials.party', ['h' => 'Supplier', 'name' => $p->sname, 'address' => $p->address, 'city' => $p->city, 'state' => $p->state, 'code' => $p->state_code, 'gstin' => $p->gstin, 'phone' => $p->phone])
         <div><h5>Store</h5><p>{{ $p->store }}</p></div>
-        <div><h5>Payment</h5><p>{{ $p->pay_mode }}</p></div>
+        <div><h5>Payment</h5><p>{{ $p->pay_mode }}@if ($p->remark)<br>Remark: {{ $p->remark }}@endif</p></div>
     </div>
     <table>
         <thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th>@if ($mode !== 'none')<th class="num">GST</th>@endif<th>New barcodes</th><th>Brand tags</th></tr></thead>

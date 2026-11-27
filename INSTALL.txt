@@ -576,3 +576,13 @@ STEP 41u - report dates, purchase bill view, purchase round-off, PDF labels
  4. Labels: new green button "Print as PDF (recommended)". It makes a PDF whose page is exactly one row (100 x 25 mm for 2 stickers of 50 x 25),
     so browser headers/footers and scaling cannot interfere. Print it from the PDF viewer with Paper = the label size (or 100x25), Scale = 100% / Actual size, Margins none.
  Server: git pull, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5. No migration.
+
+
+STEP 41v - rental invoice returned marks, replacement view/search, purchase remark, return list order
+ 1. New rental invoice: pieces that came back inside the billing period are marked "(returned dd/mm, X of Y days)" and a note explains they are billed only for the days out.
+ 2. Replacement list rows are clickable and open a full page view (replacement/show).
+ 3. Replacement form: search boxes for the faulty item and for the replacement; lists now hold up to 3000 items (the old 500 cut-off hid some in-stock items such as 800446).
+    A replacement must still be of the SAME CATEGORY as the faulty item (unchanged rule).
+ 4. Purchase: Remark field on create/edit, shown on the purchase view. NEW MIGRATION 000020 (purchases.remark).
+ 5. Return: ticked items move to the top of the list (the last ticked first) and the list scrolls to the top.
+ Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.
