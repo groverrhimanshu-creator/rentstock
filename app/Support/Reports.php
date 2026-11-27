@@ -60,6 +60,22 @@ class Reports
         return [$from, $to];
     }
 
+    /* On-rent report: from = the day the system started to be used (earliest rental), to = today, unless dates are given. */
+    public static function sinceStart(array $f): array
+    {
+        $ok = fn ($d) => is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && checkdate((int) substr($d, 5, 2), (int) substr($d, 8, 2), (int) substr($d, 0, 4));
+        $first = DB::table('rental_lines')->whereNotNull('from_at')->min('from_at');
+        $first2 = DB::table('rentals')->min('created_at');
+        $cands = array_filter([$first ? substr((string) $first, 0, 10) : null, $first2 ? substr((string) $first2, 0, 10) : null]);
+        $start = $cands ? min($cands) : date('Y-m-d');
+        $from = $ok($f['from'] ?? null) ? $f['from'] : $start;
+        $to = $ok($f['to'] ?? null) ? $f['to'] : date('Y-m-d');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        return [$from, $to];
+    }
+
     /* Rental lines (challan) that were on rent at some time between $from and $to, for the customers table. */
     private static function onRentLines(string $from, string $to)
     {
@@ -70,7 +86,7 @@ class Reports
 
     private static function onRent(array $f): array
     {
-        [$from, $to] = self::monthRange($f);
+        [$from, $to] = self::sinceStart($f);
         $cust = (int) ($f['cust'] ?? 0);
         $q = trim((string) ($f['q'] ?? ''));
         $agg = self::onRentLines($from, $to)->selectRaw('r.customer_id, count(*) as items, coalesce(sum(l.rent), 0) as rent')->groupBy('r.customer_id');
@@ -87,13 +103,13 @@ class Reports
             'meta' => $rows->pluck('id')->all(),
             'customers' => DB::table('customers')->orderBy('name')->get(['id', 'name']),
             'filters' => ['cust' => $cust ?: '', 'q' => $q, 'from' => $from, 'to' => $to],
-            'note' => 'Shows the items that were on rent at any time between the two dates (default: last month). Rent per month is the monthly rent of those items.'];
+            'note' => 'Shows the items that were on rent at any time between the two dates (default: from the first rental ever made until today). Rent per month is the monthly rent of those items.'];
     }
 
     /* The pieces a customer had on rent between $from and $to: [customer name, rows]. */
     public static function onRentItems(int $customerId, array $f = []): array
     {
-        [$from, $to] = self::monthRange($f);
+        [$from, $to] = self::sinceStart($f);
         $name = (string) DB::table('customers')->where('id', $customerId)->value('name');
         $prefix = Barcodes::prefix();
         $rows = self::onRentLines($from, $to)->where('r.customer_id', $customerId)

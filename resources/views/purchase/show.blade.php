@@ -20,14 +20,25 @@
         <div><h5>Payment</h5><p>{{ $p->pay_mode }}</p></div>
     </div>
     <table>
-        <thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>New barcodes</th><th>Brand tags</th></tr></thead>
+        <thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th>@if ($mode !== 'none')<th class="num">GST</th>@endif<th>New barcodes</th><th>Brand tags</th></tr></thead>
         <tbody>
             @foreach ($lines as $i => $l)
                 <tr><td>{{ $i + 1 }}</td><td><b>{{ $l->name }}</b></td><td>{{ $l->hsn ?: $l->item_hsn }}</td><td class="num">{{ $l->qty }}</td><td class="num">{{ \App\Support\Tax::money($l->rate) }}</td><td class="num">{{ \App\Support\Tax::money($l->qty * $l->rate) }}</td>
+                    @if ($mode !== 'none')<td class="num">{{ rtrim(rtrim(number_format((float) $l->gstp, 2, '.', ''), '0'), '.') }}%</td>@endif
                     <td><span class="codes">{{ isset($codes[$l->id]) ? $codes[$l->id]->map(fn ($c) => \App\Support\Barcodes::text($c->code))->implode(', ') : 'Quantity item' }}</span>@if (isset($codes[$l->id]) && count($codes[$l->id]) > 0) <a class="ab sm" href="{{ route('barcodes.purchase', ['id' => $p->id, 'line' => $l->id]) }}" target="_blank">Print</a>@endif</td>
                     <td>{{ isset($codes[$l->id]) ? $codes[$l->id]->pluck('brand_tag')->filter()->implode(', ') : ($l->brand_tags ?? '') }}</td></tr>
             @endforeach
         </tbody>
     </table>
+    <div class="bot">
+        <div class="nt"><b>Amount in words</b><br>{{ \App\Support\Tax::words((float) $t['total']) }}</div>
+        <div class="tt">
+            <div><span>Taxable value</span><span>{{ \App\Support\Tax::money($t['taxable']) }}</span></div>
+            @if ($mode === 'intra')<div><span>CGST</span><span>{{ \App\Support\Tax::money($t['cg']) }}</span></div><div><span>SGST</span><span>{{ \App\Support\Tax::money($t['sg']) }}</span></div>
+            @elseif ($mode === 'inter')<div><span>IGST</span><span>{{ \App\Support\Tax::money($t['ig']) }}</span></div>@endif
+            @if (abs($t['round']) > 0.004)<div><span>Round off</span><span>{{ ($t['round'] > 0 ? '+' : '') . \App\Support\Tax::money($t['round']) }}</span></div>@endif
+            <div><b>Total</b><b>{{ \App\Support\Tax::money($t['total']) }}</b></div>
+        </div>
+    </div>
 </div>
 @endsection

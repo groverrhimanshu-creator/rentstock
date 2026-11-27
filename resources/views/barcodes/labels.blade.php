@@ -32,6 +32,7 @@ body.testmode #testrow{display:flex}
 <style id="pagecss">@page{size:{{ $cols * $w + ($cols - 1) * $gap }}mm {{ $h }}mm;margin:0}</style></head><body>
 <div class="bar">
     @if ($saved)<b style="color:#1E7A46">Saved.</b>@endif
+    <button type="button" id="pdfbtn" style="background:#1B5E20;color:#fff">Print as PDF (recommended)</button>
     <button onclick="window.print()">Print {{ count($labels) }} {{ count($labels) === 1 ? 'label' : 'labels' }}</button>
     <label>Labels across<input id="o-cols" type="number" min="1" max="4" step="1" value="{{ $cols }}"></label>
     <label>Label width (mm)<input id="o-w" type="number" min="20" max="120" step="0.5" value="{{ $w }}"></label>
@@ -53,6 +54,15 @@ body.testmode #testrow{display:flex}
     <div class="lab">@if ($title !== '')<div class="t1">{{ $title }}</div>@endif{!! \App\Support\Code128::svg($text, round($w - 6, 1), round(6.6 * min($w / 50, $h / 25), 1)) !!}<div class="t2">{{ $text }}</div>@if ($l->brand_tag !== '')<div class="t3">Sr.No : {{ $l->brand_tag }}</div>@endif @if ($l->config !== '')<div class="t4">{{ $l->config }}</div>@endif<div class="t5">{{ $l->model }}</div></div>
 @endforeach
 </div>
+<form id="pdfform" method="post" action="{{ route('barcodes.labels.pdf') }}" target="_blank" hidden>@csrf
+@foreach ($labels as $l)<input type="hidden" name="codes[]" value="{{ $l->code }}">@endforeach
+@foreach (['cols','w','h','gap','dx','dy','z'] as $k)<input type="hidden" name="{{ $k }}" id="pf-{{ $k }}">@endforeach</form>
+<script>
+document.getElementById('pdfbtn').addEventListener('click', function () {
+    ['cols','w','h','gap','dx','dy','z'].forEach(function (k) { document.getElementById('pf-' + k).value = document.getElementById('o-' + k).value; });
+    document.getElementById('pdfform').submit();
+});
+</script>
 <script>
 (function () {
     var KEY = 'rs_label_v3', D = { cols: {{ $cols }}, w: {{ $w }}, h: {{ $h }}, gap: {{ $gap }}, dx: 0, dy: 0, z: 100 };

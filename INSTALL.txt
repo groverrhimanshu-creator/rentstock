@@ -567,3 +567,12 @@ If the printout is still small, the printer / print window is scaling the page d
 
 STEP 41t - label rows keep the full row width (cols x label width) and are filled up with empty stickers, so a single label (or the last odd one) prints on the first sticker of the row,
 not in the middle between two stickers. Each label is centred on its own sticker.
+
+
+STEP 41u - report dates, purchase bill view, purchase round-off, PDF labels
+ 1. Reports > On rent by customer: From = the first rental ever made, To = today (you can still type dates; "All dates" button resets).
+ 2. Purchase view now shows the whole bill: GST % per line, Taxable, CGST+SGST / IGST, Round off, Total, amount in words.
+ 3. Purchase create / edit: Round off row. Total is rounded to the NEAREST rupee (10925.01 -> -0.01 = 10925, 10925.90 -> +0.10 = 10926).
+ 4. Labels: new green button "Print as PDF (recommended)". It makes a PDF whose page is exactly one row (100 x 25 mm for 2 stickers of 50 x 25),
+    so browser headers/footers and scaling cannot interfere. Print it from the PDF viewer with Paper = the label size (or 100x25), Scale = 100% / Actual size, Margins none.
+ Server: git pull, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5. No migration.

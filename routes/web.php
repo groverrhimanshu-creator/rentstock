@@ -163,6 +163,7 @@ Route::middleware(['auth', 'role'])->group(function () {
             Route::get('/barcodes', [BarcodeController::class, 'index'])->name('barcodes.index');
             Route::get('/barcodes/label/{code}', [BarcodeController::class, 'label'])->whereNumber('code')->name('barcodes.label');
             Route::post('/barcodes/labels', [BarcodeController::class, 'labels'])->name('barcodes.labels');
+            Route::post('/barcodes/labels.pdf', [BarcodeController::class, 'labelsPdf'])->name('barcodes.labels.pdf');
             Route::get('/barcodes/purchase/{id}', [BarcodeController::class, 'purchase'])->whereNumber('id')->name('barcodes.purchase');
         });
 

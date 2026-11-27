@@ -515,12 +515,15 @@ class PurchaseController extends Controller
         $p = DB::table('purchases as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')->leftJoin('stores as st', 'st.id', '=', 'p.store_id')
             ->where('p.id', $id)->select('p.*', 's.name as sname', 's.address', 's.city', 's.state', 's.state_code', 's.gstin', 's.phone', 'st.name as store')->first();
         abort_unless($p, 404);
-        $lines = DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn']);
+        $lines = DB::table('purchase_lines as l')->join('items as i', 'i.id', '=', 'l.item_id')->where('l.purchase_id', $id)->orderBy('l.id')->get(['l.*', 'i.name', 'i.hsn as item_hsn', 'i.gst_percent as gstp']);
         $codes = DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id', 'brand_tag'])->groupBy('purchase_line_id');
         $barcoded = $lines->sum(fn ($l) => count($codes[$l->id] ?? []));
         $qtyAdded = $lines->filter(fn ($l) => !$l->barcoded)->sum('qty');
         $company = DB::table('company_profile')->where('id', 1)->first();
         $blocked = Purchases::deleteBlocker($id);
-        return view('purchase.show', compact('p', 'lines', 'codes', 'barcoded', 'qtyAdded', 'company', 'blocked'));
+        $mode = \App\Support\Tax::mode((string) $p->state_code, (string) $p->type, (string) ($company->state_code ?? ''));
+        $calc = $lines->map(fn ($l) => ['qty' => (float) $l->qty, 'price' => (float) $l->rate, 'gst' => $mode === 'none' ? 0.0 : (float) $l->gstp])->all();
+        $t = \App\Support\Tax::totals($calc, $mode, true);
+        return view('purchase.show', compact('p', 'lines', 'codes', 'barcoded', 'qtyAdded', 'company', 'blocked', 'mode', 't'));
     }
 }

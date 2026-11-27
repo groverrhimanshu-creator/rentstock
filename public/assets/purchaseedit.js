@@ -31,7 +31,9 @@
         document.getElementById('t-taxable').textContent = money(taxable);
         document.getElementById('t-taxlabel').textContent = mode === 'intra' ? 'GST (CGST + SGST)' : (mode === 'inter' ? 'GST (IGST)' : 'GST');
         document.getElementById('t-tax').textContent = money(tax);
-        document.getElementById('t-total').textContent = money(taxable + tax);
+        var ex = r2(taxable + tax), tot = Math.round(ex), ro = r2(tot - ex);
+        document.getElementById('t-ro').textContent = (ro > 0 ? '+' : '') + money(ro);
+        document.getElementById('t-total').textContent = money(tot);
         document.getElementById('t-note').textContent = mode === 'none' ? 'Bill of supply: no GST is charged.' : (mode === 'unknown' ? 'The supplier or company state is not set, so GST is shown at the full item rate.' : '');
     }
     form.addEventListener('input', calc); form.addEventListener('change', calc); form.addEventListener('click', function () { setTimeout(calc, 0); });

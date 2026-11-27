@@ -68,7 +68,9 @@
         taxable = r2(taxable); tax = r2(tax);
         document.getElementById('t-taxable').textContent = money(taxable);
         document.getElementById('t-tax').textContent = money(tax);
-        document.getElementById('t-total').textContent = money(taxable + tax);
+        var ex = r2(taxable + tax), tot = Math.round(ex), ro = r2(tot - ex);
+        document.getElementById('t-ro').textContent = (ro > 0 ? '+' : '') + money(ro);
+        document.getElementById('t-total').textContent = money(tot);
     }
 
     rows.addEventListener('change', function (e) {

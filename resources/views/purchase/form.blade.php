@@ -40,7 +40,7 @@
             <div class="rowx" style="margin-top:10px"><button type="button" class="ab solid" id="qi-save">Add item</button><button type="button" class="ab" id="qi-cancel">Cancel</button></div>
             <p class="hint">Rent and sale price start at 0. Set them later under Masters &rarr; Item.</p>
         </div>
-        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span>GST</span><span id="t-tax">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
+        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span>GST</span><span id="t-tax">0.00</span></div><div><span>Round off</span><span id="t-ro">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
         <p class="hint" id="codesum" style="font-weight:600"></p>
         <div class="msg info">Brand tag: enter one for each piece of a "With barcode" row, separated by commas (for example ABC1234, ABC1235). When you save, one {{ \App\Support\Barcodes::prefix() }} barcode is made for every piece marked "With barcode". Rows marked "No barcode" only add to the stock count. The numbers shown above are the next ones in line; they are final once you press Save (if someone else saves a purchase first, you will see the final numbers on the purchase page).</div>
         <div class="rowx"><button class="ab solid" id="savebtn">Save purchase</button></div>

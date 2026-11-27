@@ -38,7 +38,7 @@
         <h3 style="margin-top:16px">Add items to this purchase</h3>
         <div class="tw" id="addbox" hidden><table class="t"><thead><tr><th>Item</th><th>Config</th><th>HSN</th><th>Barcode?</th><th class="num">Qty</th><th>Brand tags</th><th>Rate</th><th></th></tr></thead><tbody id="addrows"></tbody></table></div>
         <div class="rowx" style="margin-top:8px"><button type="button" class="ab sm" id="addnew">+ Add an item</button></div>
-        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span id="t-taxlabel">GST</span><span id="t-tax">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
+        <div class="totbox"><div><span>Taxable</span><span id="t-taxable">0.00</span></div><div><span id="t-taxlabel">GST</span><span id="t-tax">0.00</span></div><div><span>Round off</span><span id="t-ro">0.00</span></div><div class="g"><b>Total</b><b id="t-total">0.00</b></div></div>
         <p class="hint" id="t-note"></p>
         <div class="msg info">You can add items, take items off (tick Remove), and change the item, config, HSN code, rate and quantity. A barcoded item or quantity can be changed only while its pieces are still in stock and untouched (not sold, rented, repaired or changed). To raise the quantity of a barcoded item, enter one brand tag for each new piece, separated by commas; lowering it removes the newest untouched pieces.</div>
         <div class="msg bad" id="clienterr" hidden></div>

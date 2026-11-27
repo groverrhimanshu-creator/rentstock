@@ -20,7 +20,7 @@ class Tax
     }
 
     /* $lines: list of ['qty' =>, 'price' =>, 'gst' =>] */
-    public static function totals(array $lines, string $mode): array
+    public static function totals(array $lines, string $mode, bool $nearest = false): array
     {
         $taxable = $cg = $sg = $ig = 0.0;
         foreach ($lines as $l) {
@@ -35,7 +35,7 @@ class Tax
         }
         [$taxable, $cg, $sg, $ig] = [self::r2($taxable), self::r2($cg), self::r2($sg), self::r2($ig)];
         $exact = self::r2($taxable + $cg + $sg + $ig);
-        $total = (float) ceil($exact - 1e-9);   // the invoice total is rounded UP to the next whole rupee
+        $total = $nearest ? (float) round($exact, 0, PHP_ROUND_HALF_UP) : (float) ceil($exact - 1e-9);   // invoices round UP; a purchase bill rounds to the nearest rupee
         return ['taxable' => $taxable, 'cg' => $cg, 'sg' => $sg, 'ig' => $ig, 'tax' => self::r2($cg + $sg + $ig), 'round' => self::r2($total - $exact), 'total' => $total];
     }
 

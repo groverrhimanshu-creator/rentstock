@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Barcodes;
+use App\Support\LabelPdf;
 use App\Support\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,26 @@ class BarcodeController extends Controller
             return redirect()->route('barcodes.index')->with('bad', 'Make at most 500 labels at a time.');
         }
         return $this->showLabels($codes, false, '', false);
+    }
+
+    /* The same labels as a PDF: page = one row of stickers, exact size, no browser headers or footers. */
+    public function labelsPdf(Request $request)
+    {
+        $codes = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('codes', [])))));
+        abort_if(!$codes || count($codes) > 500, 404);
+        $rows = DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->whereIn('d.code', $codes)->get(['d.code', 'd.brand_tag', 'd.config', 'i.name as model'])->keyBy('code');
+        $prefix = Barcodes::prefix();
+        $labels = [];
+        foreach ($codes as $c) {
+            if (isset($rows[$c])) {
+                $labels[] = ['text' => $prefix . $c, 'tag' => (string) $rows[$c]->brand_tag, 'config' => (string) $rows[$c]->config, 'model' => (string) $rows[$c]->model];
+            }
+        }
+        abort_if(!$labels, 404);
+        $n = fn ($k, $d, $lo, $hi) => min($hi, max($lo, is_numeric($request->input($k)) ? (float) $request->input($k) : $d));
+        $o = ['cols' => (int) $n('cols', 2, 1, 4), 'w' => $n('w', 50, 20, 120), 'h' => $n('h', 25, 15, 100), 'gap' => $n('gap', 0, 0, 20), 'dx' => $n('dx', 0, -20, 20), 'dy' => $n('dy', 0, -20, 20), 'z' => $n('z', 100, 50, 200),
+            'title' => trim((string) config('rentstock.label.title', ''))];
+        return response(LabelPdf::make($labels, $o), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="barcode-labels.pdf"']);
     }
 
     /* Labels for the barcodes a purchase made: all of them, or only one line of it (?line=). */

@@ -19,14 +19,14 @@
     @else
         <form method="get" action="{{ route('reports.index') }}" class="lt" id="rf" style="flex-wrap:wrap;align-items:flex-end;gap:10px"><input type="hidden" name="tab" value="{{ $tab }}">
             @if ($tab === 1)
-                <label class="f"><span>From</span><input type="date" name="from" value="{{ $f['from'] }}"></label>
+                <label class="f"><span>From (system start)</span><input type="date" name="from" value="{{ $f['from'] }}" readonly tabindex="-1" style="pointer-events:none;background:#eef1f4;color:#555"></label>
                 <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
                 <label class="f"><span>Customer</span>
                     <select name="cust" onchange="this.form.submit()"><option value="">All customers</option>@foreach ($data['customers'] as $c)<option value="{{ $c->id }}" @selected((string) $f['cust'] === (string) $c->id)>{{ $c->name }}</option>@endforeach</select>
                 </label>
                 <label class="f"><span>Search by customer name</span><input type="search" name="q" value="{{ $f['q'] }}" placeholder="Type a name" maxlength="100"></label>
                 <button class="ab sm">Search</button>
-                <button class="ab sm solid">Show</button><a class="ab sm" href="{{ route('reports.index', ['tab' => 1]) }}">Last month</a>
+                <button class="ab sm solid">Show</button><a class="ab sm" href="{{ route('reports.index', ['tab' => 1]) }}">Reset</a>
             @elseif ($tab === 3)
                 <label class="f"><span>From</span><input type="date" name="from" value="{{ $f['from'] }}"></label>
                 <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
