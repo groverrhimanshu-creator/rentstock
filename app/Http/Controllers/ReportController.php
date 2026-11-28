@@ -28,6 +28,42 @@ class ReportController extends Controller
         return view('reports.index', ['tab' => $t, 'tabs' => Reports::TABS, 'data' => $data, 'rows' => $rows, 'n' => $n, 'first' => $first]);
     }
 
+    /* Money paid to a supplier. */
+    public function payStore(Request $request)
+    {
+        $sid = (int) $request->input('supplier_id');
+        $back = redirect()->route('reports.index', ['tab' => 4, 'supplier' => $sid ?: null]);
+        $amount = round((float) $request->input('amount'), 2);
+        $date = (string) $request->input('paid_on');
+        $mode = in_array($request->input('mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('mode') : 'Cash';
+        if (!$sid || !\Illuminate\Support\Facades\DB::table('suppliers')->where('id', $sid)->exists()) {
+            return $back->with('bad', 'Choose the supplier.');
+        }
+        if ($amount <= 0) {
+            return $back->with('bad', 'Enter the amount paid.');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4))) {
+            $date = date('Y-m-d');
+        }
+        $due = Reports::purchaseDues([$sid])['sup'][$sid]['due'] ?? 0.0;
+        if ($amount > $due + 0.004) {
+            return $back->with('bad', 'This supplier has only INR ' . number_format($due, 2) . ' left to pay, so INR ' . number_format($amount, 2) . ' is too much.');
+        }
+        $id = \Illuminate\Support\Facades\DB::table('purchase_payments')->insertGetId(['supplier_id' => $sid, 'amount' => $amount, 'paid_on' => $date, 'mode' => $mode,
+            'note' => mb_substr(trim((string) $request->input('note', '')), 0, 255), 'user_id' => $request->user()->id, 'created_at' => now()]);
+        \App\Support\Audit::log('payment', 'purchase payment', (string) $id, 'Paid INR ' . number_format($amount, 2) . ' to supplier #' . $sid . ' by ' . $mode);
+        return $back->with('ok', 'Payment of INR ' . number_format($amount, 2) . ' saved. It is counted against the oldest unpaid bills.');
+    }
+
+    public function payDestroy(Request $request, int $id)
+    {
+        $p = \Illuminate\Support\Facades\DB::table('purchase_payments')->where('id', $id)->first();
+        abort_unless($p, 404);
+        \Illuminate\Support\Facades\DB::table('purchase_payments')->where('id', $id)->delete();
+        \App\Support\Audit::log('delete', 'purchase payment', (string) $id, 'INR ' . number_format((float) $p->amount, 2) . ' to supplier #' . $p->supplier_id);
+        return redirect()->route('reports.index', ['tab' => 4, 'supplier' => $p->supplier_id])->with('ok', 'Payment removed.');
+    }
+
     public function csv(Request $request)
     {
         $data = Reports::data($this->tab($request), $request->query());

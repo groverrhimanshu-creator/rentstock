@@ -140,7 +140,7 @@ class RentMath
             return $ri >= 0 && isset($s[$ri + 1]) ? trim($s[$ri + 1]) : '';
         }
         if ($part === 'Processor') {
-            return $ri > 0 ? trim(implode('/', array_slice($s, 0, $ri))) : '';   // everything before the RAM, e.g. i5/8th
+            return $ri > 0 ? trim(implode('/', array_slice($s, 0, $ri))) : trim((string) ($s[0] ?? ''));   // everything before the RAM, e.g. i5/8th (the first part when no RAM is written)
         }
         return '';
     }
@@ -170,8 +170,11 @@ class RentMath
     {
         [$s, $ri] = self::segs($cfg);
         $text = trim($text, " /");
-        if ($ri < 1 || $text === '') {
-            return $cfg;
+        if ($text === '' || trim($cfg) === '') {
+            return $text === '' ? $cfg : $text;
+        }
+        if ($ri < 1) {
+            return $text . (count($s) > 1 ? '/' . implode('/', array_slice($s, 1)) : '');   // no RAM in the config: the first part is the processor
         }
         return $text . '/' . implode('/', array_slice($s, $ri));
     }

@@ -28,6 +28,18 @@ class ReturnController extends Controller
         return view('return.index', compact('rows', 'q', 'n'));
     }
 
+    public function show(int $id)
+    {
+        $r = DB::table('returns as r')->join('customers as c', 'c.id', '=', 'r.customer_id')->where('r.id', $id)
+            ->first(['r.*', 'c.name as cname', 'c.address', 'c.city', 'c.state', 'c.state_code', 'c.gstin', 'c.phone']);
+        abort_unless($r, 404);
+        $lines = DB::table('return_lines as l')->join('devices as d', 'd.code', '=', 'l.code')->join('items as i', 'i.id', '=', 'd.item_id')->where('l.return_id', $id)
+            ->orderBy('l.code')->get(['l.code', 'l.cond', 'l.reason', 'l.note', 'd.config', 'd.brand_tag', 'd.status', 'i.name as model']);
+        $company = DB::table('company_profile')->where('id', 1)->first();
+        $user = $r->user_id ? (string) DB::table('users')->where('id', $r->user_id)->value('name') : '';
+        return view('return.show', ['r' => $r, 'lines' => $lines, 'company' => $company, 'prefix' => Barcodes::prefix(), 'user' => $user]);
+    }
+
     public function create()
     {
         return view('return.form', [

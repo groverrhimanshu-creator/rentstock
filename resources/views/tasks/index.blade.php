@@ -73,7 +73,7 @@
                         <div class="rowx" style="flex-wrap:wrap;gap:6px">
                             @if ($can('edit'))
                                 @if ($r->status === 'open')
-                                    <form method="post" action="{{ route('tasks.done', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input name="note" maxlength="500" placeholder="Note (optional)" style="width:150px"><button class="ab sm solid">Done</button></form>
+                                    <form method="post" action="{{ route('tasks.done', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input name="note" maxlength="500" placeholder="Note (required)" required style="width:150px"><button class="ab sm solid">Done</button></form>
                                     <form method="post" action="{{ route('tasks.reschedule', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ \Carbon\Carbon::parse(max($r->due_date, $today))->addDay()->toDateString() }}" style="width:140px"><input name="note" maxlength="500" placeholder="Reason (required)" required style="width:160px"><button class="ab sm">Move</button></form>
                                     @if ($mineOrBoss)<a class="ab sm" href="{{ route('tasks.edit', $r->id) }}">Edit</a>@endif
                                 @else

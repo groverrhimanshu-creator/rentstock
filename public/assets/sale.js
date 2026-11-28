@@ -298,7 +298,8 @@
     $('incl').addEventListener('change', function () { if (mode === 'rentinv') { loadBill(); } });
     $('customer').addEventListener('change', function () {
         /* a customer set up for rental: the invoice type becomes "rental invoice" by itself (it can still be changed) */
-        var o = this.options[this.selectedIndex];
+        var o = this.options[this.selectedIndex], pm = $('pay_mode');
+        if (o && pm && o.getAttribute('data-pay')) { pm.value = o.getAttribute('data-pay'); }   // the customer's payment method (can still be changed)
         if (mode !== 'rentinv' && !lines.length && o && o.getAttribute('data-purpose') === 'Rental') { $('mode').value = 'rentinv'; setMode('rentinv', false); return; }
         if (mode === 'rentinv') { setPeriod(); }
     });

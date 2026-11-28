@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  */
 class Reports
 {
-    public const TABS = ['Stock summary', 'On rent by customer', 'Overdue returns', 'Sales register', 'Purchase report', 'Barcode history'];
+    public const TABS = ['Stock summary', 'Customers with active assets', 'Overdue returns', 'Sales register', 'Purchase report', 'Barcode history', 'Opening stock report'];
 
     public static function data(int $t, array $f = []): array
     {
@@ -42,7 +42,23 @@ class Reports
         if ($t === 5) {
             return self::barcode($f);
         }
+        if ($t === 6) {
+            return self::openingStock();
+        }
         return self::purchases($f);
+    }
+
+    /* Opening stock report: what is in stock now, item by item (barcoded pieces in stock plus quantity items). */
+    public static function openingStock(): array
+    {
+        $rows = DB::table('items as i')->leftJoin('item_qty as q', 'q.item_id', '=', 'i.id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')
+            ->orderBy('c.name')->orderBy('i.name')
+            ->selectRaw("i.name, b.name as brand, c.name as category, i.tracked,
+                (select count(*) from devices d where d.item_id = i.id and d.status = 'in_stock') + coalesce(q.qty, 0) as in_stock")->get()
+            ->filter(fn ($r) => (int) $r->in_stock > 0)->values();
+        return ['name' => 'opening-stock-' . date('Y-m-d'), 'cols' => [['Item', ''], ['Category', ''], ['Brand', ''], ['Kind', ''], ['Current stock', 'n']],
+            'rows' => $rows->map(fn ($r) => [$r->name, (string) $r->category, (string) $r->brand, $r->tracked ? 'Barcoded' : 'By quantity', (int) $r->in_stock])->all(),
+            'empty' => 'No stock yet.', 'note' => 'Stock in hand today (dead, rented, repaired and sold items are not counted).'];
     }
 
     /* ---------- On rent by customer ---------- */
@@ -75,7 +91,7 @@ class Reports
         $first2 = DB::table('rentals')->min('created_at');
         $cands = array_filter([$first ? substr((string) $first, 0, 10) : null, $first2 ? substr((string) $first2, 0, 10) : null]);
         $start = $cands ? min($cands) : date('Y-m-d');
-        $from = $ok($f['from'] ?? null) ? $f['from'] : $start;
+        $from = self::fyStart();   // fixed: 1 April of the financial year (the field is read-only)
         $to = $ok($f['to'] ?? null) ? $f['to'] : date('Y-m-d');
         if ($from > $to) {
             [$from, $to] = [$to, $from];
@@ -302,6 +318,51 @@ class Reports
             'by' => (($f['by'] ?? '') === 'item') ? 'item' : 'bill'];
     }
 
+    /*
+     * What each supplier's bills come to and how much of it is paid. Payments are counted against the oldest bill first.
+     * Returns ['bill' => [purchase id => ['total', 'paid']], 'sup' => [supplier id => ['billed', 'paid', 'due']]]. The bill total is rounded to the nearest rupee.
+     */
+    public static function purchaseDues(array $supplierIds = []): array
+    {
+        $q = DB::table('purchases as p')->join('purchase_lines as l', 'l.purchase_id', '=', 'p.id')->join('items as i', 'i.id', '=', 'l.item_id')
+            ->groupBy('p.id', 'p.supplier_id', 'p.type', 'p.inv_date', 'p.created_at')->orderByRaw('coalesce(p.inv_date, date(p.created_at))')->orderBy('p.id')
+            ->selectRaw("p.id, p.supplier_id, p.type, sum(l.qty * l.rate) as taxable, sum(case when p.type = 'GST' then l.qty * l.rate * i.gst_percent / 100 else 0 end) as gst");
+        if ($supplierIds) {
+            $q->whereIn('p.supplier_id', $supplierIds);
+        }
+        $paidBy = DB::table('purchase_payments')->when($supplierIds, fn ($x) => $x->whereIn('supplier_id', $supplierIds))->groupBy('supplier_id')->selectRaw('supplier_id, sum(amount) as paid')->pluck('paid', 'supplier_id');
+        $left = [];
+        foreach ($paidBy as $sid => $p) {
+            $left[$sid] = (float) $p;
+        }
+        $bill = [];
+        $sup = [];
+        foreach ($q->get() as $r) {
+            $total = (float) round(Tax::r2((float) $r->taxable) + Tax::r2((float) $r->gst), 0, PHP_ROUND_HALF_UP);
+            $take = min($total, max(0.0, $left[$r->supplier_id] ?? 0.0));
+            $left[$r->supplier_id] = ($left[$r->supplier_id] ?? 0.0) - $take;
+            $bill[$r->id] = ['total' => $total, 'paid' => Tax::r2($take)];
+            $s = $sup[$r->supplier_id] ?? ['billed' => 0.0, 'paid' => 0.0, 'due' => 0.0];
+            $s['billed'] += $total;
+            $s['paid'] += $take;
+            $sup[$r->supplier_id] = $s;
+        }
+        foreach ($sup as &$s) {
+            $s['billed'] = Tax::r2($s['billed']);
+            $s['paid'] = Tax::r2($s['paid']);
+            $s['due'] = Tax::r2($s['billed'] - $s['paid']);
+            $s['advance'] = 0.0;
+        }
+        unset($s);
+        foreach ($left as $sid => $rest) {
+            if ($rest > 0.004) {
+                $sup[$sid] = ($sup[$sid] ?? ['billed' => 0.0, 'paid' => 0.0, 'due' => 0.0]) + ['advance' => 0.0];
+                $sup[$sid]['advance'] = Tax::r2($rest);   // paid more than the bills so far
+            }
+        }
+        return ['bill' => $bill, 'sup' => $sup];
+    }
+
     /* One row per purchase, by the invoice date the user entered with the purchase. The "Items" count opens what is inside. */
     private static function purchases(array $f): array
     {
@@ -312,29 +373,35 @@ class Reports
         [$c2, $b2] = self::lineFilter($f, 'l2');
         [$c1, $b1] = self::lineFilter($f, 'l');
         $rows = self::purchaseQuery($f)->orderByRaw('coalesce(p.inv_date, date(p.created_at)) desc')->orderByDesc('p.id')
-            ->selectRaw("p.id, p.inv_no, coalesce(p.inv_date, date(p.created_at)) as idate, p.created_at, p.type, p.pay_mode, s.name as supplier, st.name as store,
+            ->selectRaw("p.id, p.supplier_id, p.inv_no, coalesce(p.inv_date, date(p.created_at)) as idate, p.created_at, p.type, p.pay_mode, s.name as supplier, st.name as store,
                 (select group_concat(concat(i2.name, ' x', l2.qty) order by l2.id separator ', ') from purchase_lines l2 join items i2 on i2.id = l2.item_id where l2.purchase_id = p.id" . $c2 . ") as products,
                 (select count(*) from purchase_lines l where l.purchase_id = p.id" . $c1 . ") as nlines,
                 (select coalesce(sum(l.qty), 0) from purchase_lines l where l.purchase_id = p.id" . $c1 . ") as qty,
                 (select coalesce(sum(l.qty * l.rate), 0) from purchase_lines l where l.purchase_id = p.id" . $c1 . ") as taxable,
                 (select coalesce(sum(l.qty * l.rate * i.gst_percent / 100), 0) from purchase_lines l join items i on i.id = l.item_id where l.purchase_id = p.id" . $c1 . ") as gst", array_merge($b2, $b1, $b1, $b1, $b1))->get();
-        $tot = ['taxable' => 0.0, 'gst' => 0.0];
+        $tot = ['taxable' => 0.0, 'gst' => 0.0, 'paid' => 0.0, 'due' => 0.0];
         $out = [];
+        $dues = self::purchaseDues(array_values(array_unique(array_map(fn ($r) => (int) $r->supplier_id, $rows->all()))));
         foreach ($rows as $r) {
             $taxable = Tax::r2((float) $r->taxable);
             $gst = $r->type === 'GST' ? Tax::r2((float) $r->gst) : 0.0;   // "Bill of supply" has no GST
             $tot['taxable'] += $taxable;
             $tot['gst'] += $gst;
-            $out[] = [$r->idate, $r->inv_no, $r->supplier, $r->type, $r->pay_mode, (string) $r->store, (string) $r->products, (int) $r->nlines, (int) $r->qty, $taxable, $gst, Tax::r2($taxable + $gst), substr((string) $r->created_at, 0, 10)];
+            $out[] = [$r->idate, $r->inv_no, $r->supplier, $r->type, $r->pay_mode, (string) $r->store, (string) $r->products, (int) $r->nlines, (int) $r->qty, $taxable, $gst, Tax::r2($taxable + $gst), $dues['bill'][$r->id]['paid'] ?? 0.0, Tax::r2(($dues['bill'][$r->id]['total'] ?? 0.0) - ($dues['bill'][$r->id]['paid'] ?? 0.0)), substr((string) $r->created_at, 0, 10)];
+            $tot['paid'] += $dues['bill'][$r->id]['paid'] ?? 0.0;
+            $tot['due'] += ($dues['bill'][$r->id]['total'] ?? 0.0) - ($dues['bill'][$r->id]['paid'] ?? 0.0);
         }
+        $supSel = !empty($f['supplier']) ? (int) $f['supplier'] : 0;
+        $pays = $supSel ? DB::table('purchase_payments')->where('supplier_id', $supSel)->orderByDesc('paid_on')->orderByDesc('id')->get() : collect();
         return ['name' => 'purchase-report',
-            'cols' => [['Invoice date', 'd'], ['Invoice no', ''], ['Supplier', ''], ['Type', ''], ['Payment', ''], ['Store', ''], ['Products', ''], ['Items', 'c'], ['Qty', 'n'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm'], ['Entered on', 'd']],
+            'cols' => [['Invoice date', 'd'], ['Invoice no', ''], ['Supplier', ''], ['Type', ''], ['Payment', ''], ['Store', ''], ['Products', ''], ['Items', 'c'], ['Qty', 'n'], ['Taxable', 'm'], ['GST', 'm'], ['Total', 'm'], ['Paid', 'm'], ['Balance', 'm'], ['Entered on', 'd']],
             'rows' => $out, 'meta' => $rows->pluck('id')->all(),
             'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name']),
             'items' => DB::table('items')->orderBy('name')->get(['id', 'name']), 'categories' => DB::table('categories')->orderBy('name')->get(['id', 'name']),
             'filters' => self::purchaseFilters($f, $from, $to),
-            'summary' => [['Purchases', (string) count($out)], ['Taxable', Tax::money($tot['taxable'])], ['GST', Tax::money($tot['gst'])], ['Total', Tax::money($tot['taxable'] + $tot['gst'])]],
-            'note' => 'Purchases are picked by the invoice date entered with the purchase. GST is worked out from each item\'s GST % (none for Bill of supply).'];
+            'pays' => $pays, 'supDue' => $supSel ? ($dues['sup'][$supSel] ?? null) : null,
+            'summary' => [['Purchases', (string) count($out)], ['Taxable', Tax::money($tot['taxable'])], ['GST', Tax::money($tot['gst'])], ['Total', Tax::money($tot['taxable'] + $tot['gst'])], ['Paid', Tax::money($tot['paid'])], ['Balance to pay', Tax::money($tot['due'])]],
+            'note' => 'Paid and Balance count the payments you record for the supplier against its oldest bills first. Purchases are picked by the invoice date entered with the purchase. GST is worked out from each item\'s GST % (none for Bill of supply).'];
     }
 
     /* What is inside purchases: one row per line, with the barcodes it made. $ids = purchase ids. */

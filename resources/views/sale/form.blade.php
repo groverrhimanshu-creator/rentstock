@@ -8,14 +8,14 @@
     @csrf
     <div class="cd"><h3>Customer</h3>
         <div class="fg">
-            <label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" data-state="{{ $c->state_code }}" data-purpose="{{ $c->purpose ?? 'Both' }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }}</option>@endforeach</select></label>
+            <label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" data-state="{{ $c->state_code }}" data-purpose="{{ $c->purpose ?? 'Both' }}" data-pay="{{ $c->pay_mode ?? 'Cash' }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }}</option>@endforeach</select></label>
             <label class="f"><span>Sale / Rent</span><select name="mode" id="mode"><option value="sale">Sale (items added by you, invoice)</option><option value="rentinv" @selected(old('mode') === 'rentinv')>Rental invoice (items listed automatically)</option></select></label>
             <label class="f rentonly" hidden><span>Bill from</span><input type="date" name="period_from" id="pfrom" value="{{ old('period_from', $billFrom) }}"></label>
             <label class="f rentonly" hidden><span>Bill to</span><input type="date" name="period_to" id="pto" value="{{ old('period_to', $billTo) }}"></label>
             <label class="f rentonly" hidden style="flex-direction:row;align-items:center;gap:8px;align-self:end"><input type="checkbox" id="incl" style="width:auto"><span style="margin:0">Also bill pieces returned in these dates</span></label>
             <label class="f rentonly" hidden style="flex-direction:row;align-items:center;gap:8px;align-self:end"><input type="checkbox" name="full" id="full" value="1" @checked(old('mode') ? old('full') : true) style="width:auto"><span style="margin:0">Charge the full rent for these dates</span></label>
             <label class="f"><span>Type</span><select name="type" id="type">@foreach (['GST', 'Bill of supply'] as $o)<option @selected(old('type', 'GST') === $o)>{{ $o }}</option>@endforeach</select></label>
-            <label class="f"><span>Payment mode</span><select name="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', 'Cash') === $o)>{{ $o }}</option>@endforeach</select></label>
+            <label class="f"><span>Payment mode</span><select name="pay_mode" id="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', 'Cash') === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Remark</span><input name="remark" value="{{ old('remark') }}" maxlength="255"></label>
             @include('partials.dc-field')
         </div>

@@ -17,7 +17,7 @@
     @else
         <form method="get" action="{{ route('reports.index') }}" class="lt" id="rf" style="flex-wrap:wrap;align-items:flex-end;gap:10px"><input type="hidden" name="tab" value="{{ $tab }}">
             @if ($tab === 1)
-                <label class="f"><span>From (system start)</span><input type="date" name="from" value="{{ $f['from'] }}" readonly tabindex="-1" style="pointer-events:none;background:#eef1f4;color:#555"></label>
+                <label class="f"><span>From (financial year start)</span><input type="date" name="from" value="{{ $f['from'] }}" readonly tabindex="-1" style="pointer-events:none;background:#eef1f4;color:#555"></label>
                 <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
                 <label class="f"><span>Customer</span>
                     <select name="cust" onchange="this.form.submit()"><option value="">All customers</option>@foreach ($data['customers'] as $c)<option value="{{ $c->id }}" @selected((string) $f['cust'] === (string) $c->id)>{{ $c->name }}</option>@endforeach</select>
@@ -57,6 +57,28 @@
         </form>
         @if (!empty($data['items']))<datalist id="dl-items">@foreach ($data['items'] as $it)<option value="{{ $it->name }}">@endforeach</datalist>@endif
         @if (!empty($data['categories']))<datalist id="dl-cats">@foreach ($data['categories'] as $ct)<option value="{{ $ct->name }}">@endforeach</datalist>@endif
+        @if ($tab === 4 && ($f['by'] ?? 'bill') === 'bill' && \App\Support\Perm::has('purchase.edit'))
+            <details class="cd" style="margin:10px 0" @if (!empty($f['supplier'])) open @endif><summary style="cursor:pointer;font-weight:600">Record a payment to a supplier</summary>
+                @if (!empty($data['supDue']))<p class="hint">Bills of this supplier: INR {{ Tax::money($data['supDue']['billed']) }} · paid INR {{ Tax::money($data['supDue']['paid']) }} · <b>left to pay INR {{ Tax::money($data['supDue']['due']) }}</b>@if (($data['supDue']['advance'] ?? 0) > 0) · advance INR {{ Tax::money($data['supDue']['advance']) }}@endif</p>@endif
+                <form method="post" action="{{ route('reports.purchase.pay') }}" class="fg" style="margin-top:8px">@csrf
+                    <label class="f"><span>Supplier</span><select name="supplier_id" required><option value="">Select</option>@foreach ($data['suppliers'] as $s)<option value="{{ $s->id }}" @selected((string) $f['supplier'] === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>
+                    <label class="f"><span>Amount paid</span><input type="number" name="amount" min="0.01" step="0.01" required></label>
+                    <label class="f"><span>Date</span><input type="date" name="paid_on" value="{{ date('Y-m-d') }}" required></label>
+                    <label class="f"><span>Mode</span><select name="mode"><option>Cash</option><option>Cheque/Online</option><option>Credit</option></select></label>
+                    <label class="f"><span>Note (optional)</span><input name="note" maxlength="255" placeholder="for example: cheque no."></label>
+                    <div><button class="ab solid">Save payment</button></div>
+                </form>
+                <p class="hint">The amount is counted against the supplier's oldest unpaid bills first, and shown in Paid and Balance below.</p>
+                @if (!empty($data['pays']) && count($data['pays']))
+                    <div class="tw"><table class="t"><thead><tr><th>Date</th><th class="num">Amount</th><th>Mode</th><th>Note</th><th></th></tr></thead><tbody>
+                        @foreach ($data['pays'] as $p)
+                            <tr><td>{{ \Carbon\Carbon::parse($p->paid_on)->format('d/m/Y') }}</td><td class="num">{{ Tax::money($p->amount) }}</td><td>{{ $p->mode }}</td><td>{{ $p->note ?: '-' }}</td>
+                                <td>@include('partials.delete-btn', ['action' => route('reports.purchase.pay.del', $p->id), 'what' => 'payment', 'cls' => 'sm', 'confirm' => 'Remove this payment?'])</td></tr>
+                        @endforeach
+                    </tbody></table></div>
+                @endif
+            </details>
+        @endif
         @if (!empty($data['summary']))
             <div class="sumb" style="margin:10px 0">@foreach ($data['summary'] as $x)<div><span>{{ $x[0] }}</span><b>{{ $x[1] }}</b></div>@endforeach</div>
         @endif

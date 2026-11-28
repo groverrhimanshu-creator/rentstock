@@ -154,6 +154,9 @@ class TasksController extends Controller
     public function done(Request $request, int $id)
     {
         $t = $this->task($request, $id);
+        if (trim((string) $request->input('note', '')) === '') {
+            return back()->withErrors(['form' => 'Write a note before marking the task done.']);
+        }
         DB::table('tasks')->where('id', $id)->update(['status' => 'done', 'done_at' => now(), 'updated_at' => now()]);
         $this->event($request, $t, 'done', (string) $request->input('note', ''));
         \App\Support\Audit::log('edit', 'task', $id, 'Marked done');

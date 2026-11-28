@@ -123,8 +123,8 @@ class Masters
             ],
             'customer' => [
                 'title' => 'Customer', 'table' => 'customers', 'order' => 'name',
-                'fields' => array_merge(self::contactFields('Customer name', 'Punjab'), [['name' => 'purpose', 'label' => 'Customer is for', 'type' => 'select', 'options' => ['Both', 'Rental', 'Sale'], 'default' => 'Both']]),
-                'cols' => [['name', 'Customer'], ['city', 'City'], ['gstin', 'GSTIN'], ['contact_phone', 'Contact'], ['purpose', 'For'], ['on_rent', 'On rent', 'num']],
+                'fields' => array_merge(self::contactFields('Customer name', 'Punjab'), [['name' => 'purpose', 'label' => 'Customer is for', 'type' => 'select', 'options' => ['Both', 'Rental', 'Sale'], 'default' => 'Both'], ['name' => 'pay_mode', 'label' => 'Payment method', 'type' => 'select', 'options' => ['Cash', 'Cheque/Online', 'Credit'], 'default' => 'Cash']]),
+                'cols' => [['name', 'Customer'], ['city', 'City'], ['gstin', 'GSTIN'], ['contact_phone', 'Contact'], ['purpose', 'For'], ['pay_mode', 'Payment'], ['on_rent', 'On rent', 'num']],
                 'search' => ['name', 'address', 'city', 'state', 'gstin', 'contact', 'phone', 'email'],
                 'extra' => ["concat(contact, ' ', phone) as contact_phone"],
                 'count' => ['on_rent', "(select count(*) from devices d where d.customer_id = customers.id and d.status = 'rented')"],

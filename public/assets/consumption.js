@@ -7,8 +7,8 @@
 
     /* the same rules as the server: the first segment like 8gb is the RAM, the next one is the storage */
     function segs(cfg) { var s = String(cfg || '').split('/'), ri = -1; for (var i = 0; i < s.length; i++) { if (/^\s*\d+\s*gb\s*$/i.test(s[i])) { ri = i; break; } } return { s: s, ri: ri }; }
-    function partOld(cfg, p) { var g = segs(cfg); if (p === 'RAM') { return g.ri >= 0 ? g.s[g.ri].trim() : ''; } if (p === 'Storage') { return g.ri >= 0 && g.s[g.ri + 1] != null ? g.s[g.ri + 1].trim() : ''; } if (p === 'Processor') { return g.ri > 0 ? g.s.slice(0, g.ri).join('/').trim() : ''; } return ''; }
-    function procNew(cfg, t) { var g = segs(cfg); t = String(t || '').replace(/^[\s\/]+|[\s\/]+$/g, ''); if (g.ri < 1 || !t) { return cfg; } return t + '/' + g.s.slice(g.ri).join('/'); }
+    function partOld(cfg, p) { var g = segs(cfg); if (p === 'RAM') { return g.ri >= 0 ? g.s[g.ri].trim() : ''; } if (p === 'Storage') { return g.ri >= 0 && g.s[g.ri + 1] != null ? g.s[g.ri + 1].trim() : ''; } if (p === 'Processor') { return g.ri > 0 ? g.s.slice(0, g.ri).join('/').trim() : String(g.s[0] || '').trim(); } return ''; }
+    function procNew(cfg, t) { var g = segs(cfg); t = String(t || '').replace(/^[\s\/]+|[\s\/]+$/g, ''); if (!t) { return cfg; } if (!String(cfg || '').trim()) { return t; } if (g.ri < 1) { return t + (g.s.length > 1 ? '/' + g.s.slice(1).join('/') : ''); } return t + '/' + g.s.slice(g.ri).join('/'); }
     function partNew(cfg, p, v) {
         var g = segs(cfg); if (g.ri < 0) { return cfg; }
         if (p === 'RAM') { g.s[g.ri] = v + 'gb'; }
@@ -29,7 +29,7 @@
             if (u.part === 'Part' || u.part === 'Processor') {
                 var isP = u.part === 'Processor';
                 rows += '<tr><td>' + typeSel + '</td><td><input class="cell" style="text-align:left" readonly value="-"></td>' +
-                    '<td><input class="cell" style="text-align:left;width:100%" maxlength="60" name="ups[' + i + '][text]" data-i="' + i + '" data-f="text" placeholder="' + (isP ? 'New processor, e.g. i7/10th' : 'Which part was replaced? e.g. Battery, Keyboard') + '" value="' + esc(u.text || '') + '">' +
+                    '<td><input class="cell" style="text-align:left;width:100%" maxlength="60" name="ups[' + i + '][text]" data-i="' + i + '" data-f="text" placeholder="' + (isP ? 'Now: ' + (old || 'not recorded') + '. Type the new processor, e.g. i7/10th' : 'Which part was replaced? e.g. Battery, Keyboard') + '" value="' + esc(u.text || '') + '">' +
                     '<select name="ups[' + i + '][item_id]" data-i="' + i + '" data-f="id" style="margin-top:6px"><option value="">Not taken from stock</option>' + (parts[u.part] || []).map(function (x) { return '<option value="' + x.id + '"' + (String(u.id) === String(x.id) ? ' selected' : '') + '>Take from stock: ' + esc(x.label) + ' · ' + x.qty + ' in stock</option>'; }).join('') + '</select>' + hidden + '</td>' + del + '</tr>';
             } else {
                 rows += '<tr><td>' + typeSel + '</td><td><input class="cell" style="text-align:left" readonly value="' + esc(old || 'Not recorded') + '"></td>' +

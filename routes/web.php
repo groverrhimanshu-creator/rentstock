@@ -142,6 +142,7 @@ Route::middleware(['auth', 'role'])->group(function () {
 
         // Return
         Route::get('/return', [ReturnController::class, 'index'])->middleware('perm:return.view')->name('return.index');
+        Route::get('/return/{id}', [ReturnController::class, 'show'])->whereNumber('id')->middleware('perm:return.view')->name('return.show');
         Route::get('/return/new', [ReturnController::class, 'create'])->middleware('perm:return.create')->name('return.create');
         Route::get('/return/items', [ReturnController::class, 'items'])->middleware('perm:return.create')->name('return.items');
         Route::post('/return', [ReturnController::class, 'store'])->middleware('perm:return.create')->name('return.store');
@@ -189,6 +190,8 @@ Route::middleware(['auth', 'role'])->group(function () {
             Route::get('/reports/on-rent/{id}', [ReportController::class, 'onRent'])->whereNumber('id')->name('reports.onrent');
             Route::get('/reports/on-rent/{id}/export', [ReportController::class, 'onRentExport'])->whereNumber('id')->name('reports.onrent.export');
             Route::get('/reports/purchase/{id}', [ReportController::class, 'purchaseOne'])->whereNumber('id')->name('reports.purchase.one');
+            Route::post('/reports/purchase-pay', [ReportController::class, 'payStore'])->middleware('perm:purchase.edit')->name('reports.purchase.pay');
+            Route::delete('/reports/purchase-pay/{id}', [ReportController::class, 'payDestroy'])->whereNumber('id')->middleware('perm:purchase.edit')->name('reports.purchase.pay.del');
             Route::get('/reports/purchase-lines/csv', [ReportController::class, 'purchaseLinesCsv'])->name('reports.purchase.lines');
         });
 

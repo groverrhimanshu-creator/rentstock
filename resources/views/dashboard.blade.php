@@ -32,8 +32,8 @@
             <span><b>{{ $tk->title }}</b> · <span style="color:{{ $late ? '#B3261E' : 'inherit' }};font-weight:{{ $late ? 700 : 400 }}">{{ $late ? 'Overdue, was due ' : 'Due today ' }}{{ \Carbon\Carbon::parse($tk->due_date)->format('d/m/Y') }}</span></span>
             @if (\App\Support\Perm::has('tasks.edit'))
                 <span class="rowx" style="gap:6px">
-                    <form method="post" action="{{ route('tasks.done', $tk->id) }}" style="margin:0">@csrf<button class="ab sm solid">Done</button></form>
-                    <form method="post" action="{{ route('tasks.reschedule', $tk->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ now()->addDay()->toDateString() }}" style="width:140px"><button class="ab sm">Move</button></form>
+                    <form method="post" action="{{ route('tasks.done', $tk->id) }}" style="margin:0">@csrf<input name="note" maxlength="500" placeholder="Note (required)" required style="width:150px"><button class="ab sm solid">Done</button></form>
+                    <form method="post" action="{{ route('tasks.reschedule', $tk->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ now()->addDay()->toDateString() }}" style="width:140px"><input name="note" maxlength="500" placeholder="Reason (required)" required style="width:150px"><button class="ab sm">Move</button></form>
                 </span>
             @endif
         </div>

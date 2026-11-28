@@ -602,3 +602,20 @@ STEP 41w - 11 client changes
 11. Customer: "Customer is for" (Both / Rental / Sale). Choosing a Rental customer on a new sale invoice switches the invoice type to Rental invoice.
  NEW MIGRATIONS 000021 (task_events) and 000022 (suppliers.pay_mode, customers.purpose).
  Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.
+
+
+STEP 41x - small changes
+ - Return list rows open a full return view (return/show).
+ - Upgrade Assets > Processor shows the existing processor (falls back to the first part of the config when no RAM is written).
+ - Report "On rent by customer" is now "Customers with active assets", From fixed at 1 April of the financial year (read-only).
+ - New report tab "Opening stock report" (current stock, item by item).
+ - Marking a task done needs a note (dashboard and Tasks); moving needs a reason.
+ - Customer: Payment method (Masters > Customer); a new sale invoice starts with it. NEW MIGRATION 000023 (customers.pay_mode).
+ Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.
+
+
+STEP 41y - supplier payments on the Purchase report
+ Reports > Purchase report: "Record a payment to a supplier" (supplier, amount, date, mode, note). The payment is counted against the supplier's oldest unpaid bills first;
+ the report shows Paid and Balance per bill and in the summary, and lists / removes the supplier's payments when a supplier is chosen.
+ Bill total for Balance is rounded to the nearest rupee (same as the purchase screen). NEW MIGRATION 000024 (purchase_payments).
+ Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.
