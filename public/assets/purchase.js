@@ -143,7 +143,15 @@
     var bulk = document.getElementById('bulkrows');
     if (bulk) { bulk.addEventListener('click', function () { pickMode = 'rows'; pickRow = null; pick.click(); }); }
     document.getElementById('addline').addEventListener('click', function () { addRow(); });
-    document.getElementById('supplier').addEventListener('change', refresh);
+    /* the payment method follows the supplier (set in Masters > Supplier) and cannot be changed here */
+    function payFromSupplier() {
+        var sup = document.getElementById('supplier'), pm = document.getElementById('pay_mode'), o = sup.options[sup.selectedIndex], p = o ? o.getAttribute('data-pay') : '';
+        if (!pm) { return; }
+        if (p) { pm.value = p; pm.style.pointerEvents = 'none'; pm.style.background = '#eef1f4'; pm.tabIndex = -1; pm.setAttribute('aria-readonly', 'true'); }
+        else { pm.style.pointerEvents = ''; pm.style.background = ''; pm.tabIndex = 0; }
+    }
+    document.getElementById('supplier').addEventListener('change', function () { payFromSupplier(); refresh(); });
+    payFromSupplier();
     document.getElementById('type').addEventListener('change', refresh);
     /* ---- add a new item (and brand or category) without leaving the purchase ---- */
     var qi = document.getElementById('qi');

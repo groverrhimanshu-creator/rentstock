@@ -243,7 +243,7 @@ class Rentals
      * What to bill a customer for a period: one row per piece that was out at least one day (see RentMath::billLines for $full).
      * Each row: code, bc, item_id, name, cat, days, P, rate, price.
      */
-    public static function billLines(int $customerId, string $from, string $to, bool $full = true): array
+    public static function billLines(int $customerId, string $from, string $to, bool $full = true, bool $includeReturned = true): array
     {
         $segs = DB::table('rental_lines as l')->join('rentals as r', 'r.id', '=', 'l.rental_id')
             ->where('r.kind', 'challan')->where('r.customer_id', $customerId)
@@ -263,12 +263,18 @@ class Rentals
         }
         foreach ($rows as &$x) {
             $x['returned'] = $lastRet[$x['code']] ?? null;
+            $x['_keep'] = $includeReturned || $x['returned'] === null;
             $it = $items[$x['item_id']];
             $x['bc'] = $prefix . $x['code'];
             $x['name'] = $it->name;
             $x['cat'] = (string) ($it->cat ?? '');
         }
         unset($x);
+        $rows = array_values(array_filter($rows, fn ($x) => $x['_keep']));
+        foreach ($rows as &$y) {
+            unset($y['_keep']);
+        }
+        unset($y);
         return $rows;
     }
 

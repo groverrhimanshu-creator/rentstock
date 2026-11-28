@@ -12,6 +12,7 @@ class Moves
     public const REASONS = ['Rent period over', 'Project closed', 'Customer reduced seats'];
     public const KIND_RENTAL = 'Rental received';
     public const KIND_SALE = 'Sales received (credit note)';
+    public const KIND_UPGRADE = 'Upgrade / swap (not faulty)';   // rental item swapped for a better one: the old piece is fine and goes straight back to stock
 
     private static function bc(int $code): string
     {
@@ -153,6 +154,7 @@ class Moves
     {
         return DB::transaction(function () use ($d, $userId) {
             $sold = $d['kind'] === self::KIND_SALE;
+            $upg = $d['kind'] === self::KIND_UPGRADE;
             $customer = DB::table('customers')->where('id', $d['customer_id'])->first(['id', 'name']);
             if (!$customer) {
                 throw new RuntimeException('Please choose a customer.');
@@ -191,8 +193,8 @@ class Moves
                 'kind' => $d['kind'], 'customer_id' => $customer->id, 'old_code' => $old->code, 'new_code' => $new->code, 'reason' => $d['reason'], 'fault' => $d['fault'] ?? '', 'cn' => $cn,
                 'rent' => $rent, 'old_return_by' => $old->return_by, 'user_id' => $userId, 'created_at' => $now,
             ]);
-            DB::table('devices')->where('code', $old->code)->update(['status' => 'repair', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
-            $oldHist = self::history((int) $old->code, 'Replaced at ' . $customer->name . ' · ' . strtolower($d['fault'] ?? 'faulty') . ', sent to repair', $userId, $now);
+            DB::table('devices')->where('code', $old->code)->update(['status' => $upg ? 'in_stock' : 'repair', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
+            $oldHist = self::history((int) $old->code, $upg ? 'Swapped out at ' . $customer->name . ' for an upgrade, back in stock' : 'Replaced at ' . $customer->name . ' · ' . strtolower($d['fault'] ?? 'faulty') . ', sent to repair', $userId, $now);
             if ($sold) {
                 DB::table('devices')->where('code', $new->code)->update(['status' => 'sold', 'customer_id' => $customer->id]);
                 $newHist = self::history((int) $new->code, 'Sold as replacement to ' . $customer->name . ' (credit note ' . $cn . ')', $userId, $now);
@@ -221,7 +223,7 @@ class Moves
         $sold = $r->kind === self::KIND_SALE;
         $old = DB::table('devices')->where('code', $r->old_code)->first(['status']);
         $new = DB::table('devices')->where('code', $r->new_code)->first(['status', 'customer_id']);
-        $bad = !$old || $old->status !== 'repair' || self::movedAfter((int) $r->old_code, $r->old_hist_id ? (int) $r->old_hist_id : null)
+        $bad = !$old || $old->status !== ($r->kind === self::KIND_UPGRADE ? 'in_stock' : 'repair') || self::movedAfter((int) $r->old_code, $r->old_hist_id ? (int) $r->old_hist_id : null)
             || !$new || $new->status !== ($sold ? 'sold' : 'rented') || (int) $new->customer_id !== (int) $r->customer_id || self::movedAfter((int) $r->new_code, $r->new_hist_id ? (int) $r->new_hist_id : null);
         if ($bad) {
             return 'This replacement cannot be deleted. The faulty item or the new item has moved on since (repaired, rented, sold or returned).';
@@ -275,11 +277,14 @@ class Moves
      */
     public static function partsInStock(): array
     {
-        $out = ['RAM' => [], 'Storage' => [], 'Part' => []];
+        $out = ['RAM' => [], 'Storage' => [], 'Processor' => [], 'Part' => []];
         $rows = DB::table('item_qty as q')->join('items as i', 'i.id', '=', 'q.item_id')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')
             ->where('q.qty', '>', 0)->get(['i.id', 'i.name', 'c.name as cat', 'q.qty']);
         foreach ($rows as $r) {
             $p = RentMath::itemPart($r->name, (string) ($r->cat ?? ''));
+            if (!$p || !in_array($p['part'], ['RAM', 'Storage'], true)) {
+                $out['Processor'][] = ['id' => (int) $r->id, 'label' => $r->name, 'qty' => (int) $r->qty, 'val' => null];
+            }
             if ($p && in_array($p['part'], ['RAM', 'Storage'], true)) {
                 $out[$p['part']][] = ['id' => (int) $r->id, 'label' => RentMath::valLabel($p['part'], $p['val'], $r->name), 'qty' => (int) $r->qty, 'val' => $p['val']];
             } else {
@@ -337,6 +342,16 @@ class Moves
                         throw new RuntimeException('The part name can have 60 characters at most.');
                     }
                     $ups[] = ['part' => 'Part', 'val' => null, 'item' => $it, 'label' => $text];
+                } elseif ($u['part'] === 'Processor') {
+                    $text = trim(preg_replace('/\s+/', ' ', (string) ($u['text'] ?? '')));
+                    if ($text === '' || mb_strlen($text) > 60) {
+                        throw new RuntimeException('Write the new processor (for example i7/10th), 60 characters at most.');
+                    }
+                    if (isset($seen['Processor'])) {
+                        throw new RuntimeException('The processor can be changed only once in one upgrade.');
+                    }
+                    $seen['Processor'] = true;
+                    $ups[] = ['part' => 'Processor', 'val' => null, 'text' => $text, 'item' => $it, 'label' => $text];
                 } else {
                     if (isset($seen[$u['part']])) {
                         throw new RuntimeException('RAM and SSD can each be changed only once in one upgrade.');
@@ -359,7 +374,7 @@ class Moves
                     }
                 }
             }
-            $chain = RentMath::upChain($dv->config, array_map(fn ($u) => ['part' => $u['part'], 'val' => $u['val']], $ups));
+            $chain = RentMath::upChain($dv->config, array_map(fn ($u) => ['part' => $u['part'], 'val' => $u['val'], 'text' => $u['text'] ?? ''], $ups));
             $now = now();
             $last = 0;
             foreach ($chain as $k => $c) {
@@ -379,7 +394,7 @@ class Moves
                     DB::table('item_qty')->where('item_id', $u['item']->id)->decrement('qty');
                 }
                 ConfigLog::add((int) $dv->code, $isPart ? 'part' : 'upgrade', $c['cfg_before'], $c['cfg_after'],
-                    $isPart ? 'Part replaced: ' . $u['label'] . ($u['item'] ? ' (stock item: ' . $u['item']->name . ')' : '') : $partText . ': ' . $from . ' to ' . $u['label'] . ' (part: ' . $u['item']->name . ')', $userId, $now);
+                    $isPart ? 'Part replaced: ' . $u['label'] . ($u['item'] ? ' (stock item: ' . $u['item']->name . ')' : '') : $partText . ': ' . $from . ' to ' . $u['label'] . ($u['item'] ? ' (part: ' . $u['item']->name . ')' : ''), $userId, $now);
             }
             DB::table('devices')->where('code', $dv->code)->update(['config' => $chain[count($chain) - 1]['cfg_after']]);
             Audit::created('upgrade', 'consumptions', (int) $last);

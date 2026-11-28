@@ -66,6 +66,14 @@ class Menu
             $menu[] = ['id' => 'sale', 'label' => 'Sale', 'icon' => 'tag', 'url' => route('sale.index')];
         }
         foreach ([['rental', 'rent'], ['return', 'back'], ['replacement', 'swap'], ['consumption', 'chip'], ['barcodes', 'bars'], ['payments', 'rupee'], ['reports', 'chart']] as [$slug, $icon]) {
+            if ($slug === 'reports' && Perm::has('reports.view')) {
+                $kids = [];
+                foreach (Reports::TABS as $i => $label) {
+                    $kids[] = ['id' => 'report:' . $i, 'label' => $label, 'url' => route('reports.index', ['tab' => $i])];
+                }
+                $menu[] = ['id' => 'reports', 'label' => 'Reports', 'icon' => $icon, 'children' => $kids];
+                continue;
+            }
             if (Perm::has($slug . '.view')) {
                 $menu[] = $page($slug, $icon);
             }
@@ -142,6 +150,9 @@ class Menu
         }
         if (str_starts_with($name, 'stock.import')) {
             return 'import';
+        }
+        if (str_starts_with($name, 'reports.')) {
+            return 'report:' . (int) request()->query('tab', 0);
         }
         foreach (['rental.' => 'rental', 'return.' => 'return', 'replacement.' => 'replacement', 'consumption.' => 'consumption', 'barcodes.' => 'barcodes', 'payments.' => 'payments', 'reports.' => 'reports', 'my.' => 'myinv'] as $prefix => $id) {
             if (str_starts_with($name, $prefix)) {

@@ -291,13 +291,23 @@ class PurchaseController extends Controller
     public function create()
     {
         return view('purchase.form', [
-            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code']),
+            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code', 'pay_mode']),
             'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']),
             'items' => DB::table('items as i')->leftJoin('categories as c', 'c.id', '=', 'i.category_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')->orderBy('i.name')->get(['i.id', 'i.name', 'i.tracked', 'i.gst_percent', 'i.hsn', 'c.name as cat', 'b.name as brand']),
             'brands' => DB::table('brands')->orderBy('name')->get(['id', 'name']),
             'categories' => DB::table('categories')->orderBy('name')->get(['id', 'name']),
             'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
         ]);
+    }
+
+    /* The payment mode of a purchase is the supplier's payment method (set under Masters > Supplier). */
+    private function supplierPay(int $supplierId, string $posted): string
+    {
+        $m = (string) DB::table('suppliers')->where('id', $supplierId)->value('pay_mode');
+        if (in_array($m, ['Cash', 'Cheque/Online', 'Credit'], true)) {
+            return $m;
+        }
+        return in_array($posted, ['Cash', 'Cheque/Online', 'Credit'], true) ? $posted : 'Cash';
     }
 
     public function store(Request $request)
@@ -312,7 +322,7 @@ class PurchaseController extends Controller
             return $fail($dup);
         }
         $type = $request->input('type') === 'Bill of supply' ? 'Bill of supply' : 'GST';
-        $pay = in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : 'Cash';
+        $pay = $this->supplierPay($supplierId, (string) $request->input('pay_mode'));
         $storeId = (int) $request->input('store_id');
         if (!DB::table('stores')->where('id', $storeId)->exists()) {
             $storeId = (int) DB::table('stores')->orderBy('id')->value('id');
@@ -413,7 +423,7 @@ class PurchaseController extends Controller
             'companyState' => (string) DB::table('company_profile')->where('id', 1)->value('state_code'),
             'why' => DB::table('purchase_lines')->where('purchase_id', $id)->get()->mapWithKeys(fn ($l) => [$l->id => Purchases::lineRemoveBlocker($l)])->all(),
             'codes' => DB::table('devices')->where('purchase_id', $id)->orderBy('code')->get(['code', 'purchase_line_id'])->groupBy('purchase_line_id'),
-            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code']),
+            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name', 'state_code', 'pay_mode']),
             'stores' => DB::table('stores')->orderBy('id')->get(['id', 'name']),
         ]);
     }
@@ -478,7 +488,7 @@ class PurchaseController extends Controller
             Purchases::update($id, [
                 'supplier_id' => $supplierId, 'inv_no' => mb_substr(trim((string) $request->input('inv_no', '')), 0, 60), 'inv_date' => $date,
                 'type' => $request->input('type') === 'Bill of supply' ? 'Bill of supply' : 'GST',
-                'pay_mode' => in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : 'Cash',
+                'pay_mode' => (int) DB::table('purchases')->where('id', $id)->value('supplier_id') === $supplierId && in_array($request->input('pay_mode'), ['Cash', 'Cheque/Online', 'Credit'], true) ? $request->input('pay_mode') : $this->supplierPay($supplierId, (string) $request->input('pay_mode')),
                 'store_id' => $storeId, 'remark' => mb_substr(trim((string) $request->input('remark', '')), 0, 255), 'lines' => $lines, 'remove' => $remove, 'add' => $add,
             ], $request->user()->id);
         } catch (RuntimeException $e) {

@@ -45,6 +45,7 @@ Route::middleware(['auth', 'role'])->group(function () {
     Route::middleware('role:admin,subadmin')->group(function () {
         $T = \App\Http\Controllers\TasksController::class;
         Route::get('/tasks', [$T, 'index'])->middleware('perm:tasks.view')->name('tasks.index');
+        Route::get('/tasks/history', [$T, 'history'])->middleware('perm:tasks.view')->name('tasks.history');
         Route::post('/tasks', [$T, 'store'])->middleware('perm:tasks.create')->name('tasks.store');
         Route::get('/tasks/{id}/edit', [$T, 'edit'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.edit');
         Route::put('/tasks/{id}', [$T, 'update'])->whereNumber('id')->middleware('perm:tasks.edit')->name('tasks.update');
@@ -74,6 +75,9 @@ Route::middleware(['auth', 'role'])->group(function () {
             Route::middleware('perm:stock.repair')->group(function () {
                 Route::post('/device/{code}/repaired', [StockController::class, 'repaired'])->whereNumber('code')->name('stock.device.repaired');
                 Route::post('/repaired', [StockController::class, 'repairedMany'])->name('stock.repaired');
+                Route::post('/device/{code}/dead', [StockController::class, 'dead'])->whereNumber('code')->name('stock.device.dead');
+                Route::post('/dead', [StockController::class, 'deadMany'])->name('stock.dead');
+                Route::post('/device/{code}/revive', [StockController::class, 'revive'])->whereNumber('code')->name('stock.device.revive');
             });
             Route::middleware('perm:stock.import')->group(function () {
                 Route::get('/import', [StockController::class, 'importShow'])->name('stock.import');

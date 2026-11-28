@@ -47,7 +47,7 @@ class ReplacementController extends Controller
     {
         return view('replacement.form', [
             'customers' => DB::table('customers')->orderBy('name')->get(['id', 'name']),
-            'kinds' => [Moves::KIND_RENTAL, Moves::KIND_SALE],
+            'kinds' => [Moves::KIND_RENTAL, Moves::KIND_SALE, Moves::KIND_UPGRADE],
             'prefix' => Barcodes::prefix(),
             'dataUrl' => route('replacement.data'),
             'stockUrl' => route('sale.stock'),
@@ -98,31 +98,62 @@ class ReplacementController extends Controller
         if (!$customerId || !DB::table('customers')->where('id', $customerId)->exists()) {
             return $fail('Please choose a customer.');
         }
-        $kind = $request->input('kind') === Moves::KIND_SALE ? Moves::KIND_SALE : Moves::KIND_RENTAL;
-        $old = (int) $request->input('old_code');
-        $new = (int) $request->input('new_code');
-        if (!$old || !$new) {
-            return $fail('Choose the faulty item and its replacement.');
-        }
-        $fault = (string) $request->input('fault', '');
-        if (!in_array($fault, Moves::FAULTS, true)) {
-            return $fail('Choose whether the item is Damaged or Faulty.');
-        }
+        $kind = in_array($request->input('kind'), [Moves::KIND_SALE, Moves::KIND_UPGRADE], true) ? $request->input('kind') : Moves::KIND_RENTAL;
+        $upg = $kind === Moves::KIND_UPGRADE;
         $reason = mb_substr(trim((string) $request->input('reason', '')), 0, 255);
         if ($reason === '') {
-            return $fail('Please enter the reason for the replacement.');
+            return $fail($upg ? 'Please enter the reason for the upgrade (for example: upgraded to i7).' : 'Please enter the reason for the replacement.');
         }
+        $pairs = [];
+        $seen = [];
+        foreach ((array) $request->input('rows', []) as $i => $row) {
+            $old = (int) ($row['old_code'] ?? 0);
+            $new = (int) ($row['new_code'] ?? 0);
+            if (!$old && !$new) {
+                continue;   // an empty row is ignored
+            }
+            if (!$old || !$new) {
+                return $fail('Row ' . ($i + 1) . ': choose the item coming back and the item to give.');
+            }
+            if (isset($seen[$old]) || isset($seen[$new])) {
+                return $fail('Row ' . ($i + 1) . ': an item is used twice.');
+            }
+            $seen[$old] = $seen[$new] = true;
+            $fault = (string) ($row['fault'] ?? '');
+            if (!$upg && !in_array($fault, Moves::FAULTS, true)) {
+                return $fail('Row ' . ($i + 1) . ': choose whether the item is Damaged or Faulty.');
+            }
+            $pairs[] = [$old, $new, $upg ? '' : $fault];
+        }
+        if (!$pairs) {
+            return $fail('Choose the item coming back and the item to give.');
+        }
+        if (count($pairs) > 50) {
+            return $fail('One replacement can have 50 items at most.');
+        }
+        $ids = [];
+        $cns = [];
         try {
-            $rid = Moves::createReplacement([
-                'kind' => $kind, 'customer_id' => $customerId, 'old_code' => $old, 'new_code' => $new,
-                'reason' => $reason, 'fault' => $fault,
-            ], $request->user()->id);
+            DB::transaction(function () use ($pairs, $kind, $customerId, $reason, $request, &$ids, &$cns) {
+                foreach ($pairs as [$old, $new, $fault]) {
+                    $rid = Moves::createReplacement(['kind' => $kind, 'customer_id' => $customerId, 'old_code' => $old, 'new_code' => $new, 'reason' => $reason, 'fault' => $fault], $request->user()->id);
+                    $ids[] = (int) $rid;
+                    $cn = DB::table('replacements')->where('id', $rid)->value('cn');
+                    if ($cn) {
+                        $cns[] = $cn;
+                    }
+                }
+            });
         } catch (RuntimeException $e) {
             return $fail($e->getMessage());
         }
-        \App\Support\DcCopy::attach($request, 'replacements', (int) $rid);
-        $cn = DB::table('replacements')->where('old_code', $old)->where('new_code', $new)->orderByDesc('id')->value('cn');
-        return redirect()->route('replacement.index')->with('ok', 'Replacement saved.' . ($cn ? ' Credit note ' . $cn . ' created.' : ''));
+        if ($request->hasFile('dc_file')) {
+            foreach ($ids as $rid) {
+                \App\Support\DcCopy::attach($request, 'replacements', $rid);   // the same signed copy is kept on every row
+            }
+        }
+        $msg = ($upg ? 'Upgrade swap saved' : 'Replacement saved') . (count($ids) > 1 ? ' (' . count($ids) . ' items).' : '.') . ($cns ? ' Credit note ' . implode(', ', $cns) . ' created.' : '');
+        return redirect()->route('replacement.index')->with('ok', $msg);
     }
 
     public function destroy(Request $request, int $id)

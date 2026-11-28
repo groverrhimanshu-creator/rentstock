@@ -32,7 +32,7 @@ class SaleController extends Controller
     public function create()
     {
         return view('sale.form', [
-            'customers' => DB::table('customers')->orderBy('name')->get(['id', 'name', 'state_code']),
+            'customers' => DB::table('customers')->orderBy('name')->get(['id', 'name', 'state_code', 'purpose']),
             'items' => DB::table('items')->get(['id', 'name', 'gst_percent', 'sale_price', 'hsn'])->keyBy('id'),
             'stockItems' => DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->where('d.status', 'in_stock')
                 ->groupBy('i.id', 'i.name')->orderBy('i.name')->get(['i.id', 'i.name', DB::raw('count(*) as n')]),

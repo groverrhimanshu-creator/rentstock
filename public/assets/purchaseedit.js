@@ -5,6 +5,11 @@
     function r2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
     function money(x) { return Number(x).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function item(id) { for (var i = 0; i < C.items.length; i++) { if (String(C.items[i].id) === String(id)) { return C.items[i]; } } return null; }
+    function payFromSupplier() {
+        var sup = document.getElementById('supplier'), pm = document.getElementById('pay_mode'), o = sup.options[sup.selectedIndex], p = o ? o.getAttribute('data-pay') : '';
+        if (!pm || !p) { return; }
+        pm.value = p; pm.style.pointerEvents = 'none'; pm.style.background = '#eef1f4'; pm.tabIndex = -1; pm.setAttribute('aria-readonly', 'true');
+    }
     function calc() {
         var type = document.getElementById('type').value, sup = document.getElementById('supplier'), st = sup.options[sup.selectedIndex] ? sup.options[sup.selectedIndex].getAttribute('data-state') : '';
         var mode = type !== 'GST' ? 'none' : (!st || !C.companyState ? 'unknown' : (st === C.companyState ? 'intra' : 'inter'));
@@ -36,6 +41,7 @@
         document.getElementById('t-total').textContent = money(tot);
         document.getElementById('t-note').textContent = mode === 'none' ? 'Bill of supply: no GST is charged.' : (mode === 'unknown' ? 'The supplier or company state is not set, so GST is shown at the full item rate.' : '');
     }
+    document.getElementById('supplier').addEventListener('change', payFromSupplier);
     form.addEventListener('input', calc); form.addEventListener('change', calc); form.addEventListener('click', function () { setTimeout(calc, 0); });
     calc();
 })();

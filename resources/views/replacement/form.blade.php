@@ -10,26 +10,20 @@
         <div class="fg">
             <label class="f"><span>Type</span><select name="kind" id="kind">@foreach ($kinds as $k)<option @selected(old('kind', $kinds[0]) === $k)>{{ $k }}</option>@endforeach</select></label>
             <label class="f"><span>Customer</span><select name="customer_id" id="customer"><option value="">Select</option>@foreach ($customers as $c)<option value="{{ $c->id }}" @selected((string) old('customer_id') === (string) $c->id)>{{ $c->name }}</option>@endforeach</select></label>
-            <label class="f"><span>Faulty item coming back</span><input id="oldq" type="search" placeholder="Search: barcode, model or brand tag" autocomplete="off" class="ctl" style="margin-bottom:6px"><select name="old_code" id="old"><option value="">Select</option></select><button type="button" class="ab sm" style="margin-top:6px;align-self:flex-start" data-camscan-select="old" data-title="Scan the faulty item">Scan</button></label>
-            <label class="f"><span>Replace with</span><input id="newq" type="search" placeholder="Search: barcode, brand or model" autocomplete="off" class="ctl" style="margin-bottom:6px" disabled><select name="new_code" id="new" disabled><option value="">Choose the faulty item first</option></select><button type="button" class="ab sm" style="margin-top:6px;align-self:flex-start" data-camscan-select="new" data-title="Scan the replacement item">Scan</button></label>
-            <label class="f"><span>Item condition</span><select name="fault" id="fault" required><option value="">Select</option>@foreach (\App\Support\Moves::FAULTS as $x)<option @selected(old('fault') === $x)>{{ $x }}</option>@endforeach</select></label>
             @include('partials.dc-field')
-            <label class="f"><span>Reason</span><input name="reason" id="reason" value="{{ old('reason') }}" maxlength="255" required placeholder="What is wrong with the item"></label>
+            <label class="f"><span id="reasonlab">Reason</span><input name="reason" id="reason" value="{{ old('reason') }}" maxlength="255" required placeholder="What is wrong with the item"></label>
         </div>
-        <div class="f sugwrap full" id="searchbox" style="margin-top:12px" hidden><span>Not the same brand in stock? Search inside this category (brand, model or barcode)</span>
-            <input id="repq" placeholder="for example: HP screen" autocomplete="off"><div id="sug"></div></div>
+        <div class="msg info" id="kindnote" style="margin-top:12px"></div>
+        <h3 style="margin-top:14px">Items (<span id="rcount">1</span>)</h3>
+        <div class="tw"><table class="t" id="rtab"><thead><tr><th>#</th><th>Item coming back</th><th>Replace with / give instead</th><th id="condh">Condition</th><th></th></tr></thead><tbody id="rrows"></tbody></table></div>
+        <div class="rowx" style="margin-top:8px"><button type="button" class="ab sm" id="addrow">+ Add another item</button></div>
         <div id="note"></div>
-        <div class="msg info" id="kindnote"></div>
-        <div class="rowx"><button class="ab solid">Save replacement</button></div>
+        <div class="rowx" style="margin-top:12px"><button class="ab solid">Save</button></div>
     </div>
 </form>
 @php
-    $pdata = ['dataUrl' => $dataUrl, 'stockUrl' => $stockUrl, 'rental' => $kinds[0], 'oldSel' => (string) old('old_code'), 'newSel' => (string) old('new_code')];
+    $pdata = ['dataUrl' => $dataUrl, 'stockUrl' => $stockUrl, 'rental' => $kinds[0], 'sale' => $kinds[1], 'upgrade' => $kinds[2], 'faults' => \App\Support\Moves::FAULTS];
 @endphp
 <script>window.REP = {!! json_encode($pdata, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};</script>
 <script src="{{ \App\Support\Assets::url('assets/replacement.js') }}"></script>
-<script>document.getElementById('pf').addEventListener('submit', function (e) {
-    var m = !document.getElementById('fault').value ? 'Choose whether the item is Damaged or Faulty.' : (!document.getElementById('reason').value.trim() ? 'Please enter the reason for the replacement.' : '');
-    if (m) { e.preventDefault(); e.stopImmediatePropagation(); var b = document.getElementById('clienterr'); b.textContent = m; b.hidden = false; window.scrollTo(0, 0); }
-}, true);</script>
 @endsection

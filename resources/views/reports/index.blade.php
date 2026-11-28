@@ -11,9 +11,7 @@
     </div>
 </div>
 <div class="cd">
-    <div class="tabsx">
-        @foreach ($tabs as $i => $t)<a href="{{ route('reports.index', ['tab' => $i]) }}" aria-selected="{{ $i === $tab ? 'true' : 'false' }}">{{ $t }}</a>@endforeach
-    </div>
+    <h3 style="margin:0 0 10px">{{ $tabs[$tab] }}</h3>
     @if (!$data['rows'] && !empty($data['empty']))
         <div class="msg ok">{{ $data['empty'] }}</div>
     @else
@@ -40,7 +38,7 @@
                 </label>
                 <label class="f"><span>Search invoice / customer</span><input type="search" name="q" value="{{ $f['q'] }}" placeholder="Type to search" maxlength="100"></label>
                 <button class="ab sm solid">Show</button>
-                <a class="ab sm" href="{{ route('reports.index', ['tab' => 3]) }}">Last month</a>
+                <a class="ab sm" href="{{ route('reports.index', ['tab' => 3]) }}">Reset</a>
             @elseif ($tab === 4)
                 <label class="f"><span>From</span><input type="date" name="from" value="{{ $f['from'] }}"></label>
                 <label class="f"><span>To</span><input type="date" name="to" value="{{ $f['to'] }}"></label>
@@ -53,7 +51,7 @@
                     <select name="by"><option value="bill" @selected($f['by'] === 'bill')>Each purchase</option><option value="item" @selected($f['by'] === 'item')>Item-wise totals</option></select>
                 </label>
                 <button class="ab sm solid">Show</button>
-                <a class="ab sm" href="{{ route('reports.index', ['tab' => 4]) }}">Last month</a>
+                <a class="ab sm" href="{{ route('reports.index', ['tab' => 4]) }}">Reset</a>
             @endif
             <label class="f"><span>Rows per page</span><select name="n" onchange="this.form.submit()">@foreach (\App\Support\Pager::SIZES as $o)<option value="{{ $o }}" @selected($n === $o)>{{ $o }}</option>@endforeach</select></label>
         </form>

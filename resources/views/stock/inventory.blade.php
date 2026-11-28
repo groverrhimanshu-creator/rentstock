@@ -5,7 +5,7 @@
 <div class="cd">
     @if ($itemId > 0)<p class="hint">Showing only <b>{{ $itemName }}</b>. <a href="{{ route('stock.inventory') }}">Show all models</a> · <a href="{{ route('stock.check') }}">Back to stock check</a></p>@endif
     <div class="tabsx">
-        @foreach (['' => 'All', 'in_stock' => 'In stock', 'rented' => 'On rent', 'repair' => 'In repair', 'sold' => 'Sold'] as $k => $label)
+        @foreach (['' => 'All', 'in_stock' => 'In stock', 'rented' => 'On rent', 'repair' => 'In repair', 'sold' => 'Sold', 'dead' => 'Dead'] as $k => $label)
             <a href="{{ route('stock.inventory', array_filter(['status' => $k, 'n' => $n, 'q' => $q, 'item' => $itemId])) }}" aria-selected="{{ $status === $k ? 'true' : 'false' }}">{{ $label }}</a>
         @endforeach
     </div>
@@ -19,6 +19,7 @@
         <form id="repform" method="post" action="{{ route('stock.repaired') }}">@csrf</form>
         <div class="rowx" style="margin:8px 0;align-items:flex-end;flex-wrap:wrap"><label class="f" style="min-width:240px"><span>Note (optional)</span><input form="repform" name="note" maxlength="200" placeholder="for example: repaired and tested"></label>
             <button form="repform" class="ab solid" onclick="return confirm('Put the ticked items back in stock?')">Repaired, put ticked items back in stock</button>
+            <button form="repform" formaction="{{ route('stock.dead') }}" class="ab danger" onclick="return confirm('Mark the ticked items as DEAD? They will not be counted or offered anywhere.')">Mark ticked as dead</button>
             <button type="button" class="ab sm" onclick="document.querySelectorAll('input[name=\'codes[]\']').forEach(function(c){c.checked=true})">Tick all shown</button></div>
     @endif
     <div class="tw"><table class="t">

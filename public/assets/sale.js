@@ -278,7 +278,7 @@
         var cid = $('customer').value, from = $('pfrom').value, to = $('pto').value;
         $('rent-hint').hidden = !!cid;
         if (!cid || !from || !to) { rentRows = []; render(); return; }
-        get(C.billUrl + '?customer_id=' + encodeURIComponent(cid) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) + '&full=' + ($('full').checked ? '1' : '0')).then(function (r) {
+        get(C.billUrl + '?customer_id=' + encodeURIComponent(cid) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) + '&full=' + ($('full').checked ? '1' : '0') + '&incl=' + ($('incl').checked ? '1' : '0')).then(function (r) {
             if (mode !== 'rentinv' || $('customer').value !== cid) { return; }
             $('usedates').hidden = true; sug = null;
             if (r.error) { rentRows = []; err(r.error); render(); return; }
@@ -295,7 +295,13 @@
     $('pfrom').addEventListener('change', function () { if (mode === 'rentinv') { loadBill(); } });
     $('pto').addEventListener('change', function () { if (mode === 'rentinv') { loadBill(); } });
     $('full').addEventListener('change', function () { if (mode === 'rentinv') { loadBill(); } });
-    $('customer').addEventListener('change', function () { if (mode === 'rentinv') { setPeriod(); } });
+    $('incl').addEventListener('change', function () { if (mode === 'rentinv') { loadBill(); } });
+    $('customer').addEventListener('change', function () {
+        /* a customer set up for rental: the invoice type becomes "rental invoice" by itself (it can still be changed) */
+        var o = this.options[this.selectedIndex];
+        if (mode !== 'rentinv' && !lines.length && o && o.getAttribute('data-purpose') === 'Rental') { $('mode').value = 'rentinv'; setMode('rentinv', false); return; }
+        if (mode === 'rentinv') { setPeriod(); }
+    });
     $('relist').addEventListener('click', loadBill);
     $('usedates').addEventListener('click', function () { if (sug) { $('pfrom').value = sug.from; $('pto').value = sug.to; loadBill(); } });
 

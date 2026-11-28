@@ -586,3 +586,19 @@ STEP 41v - rental invoice returned marks, replacement view/search, purchase rema
  4. Purchase: Remark field on create/edit, shown on the purchase view. NEW MIGRATION 000020 (purchases.remark).
  5. Return: ticked items move to the top of the list (the last ticked first) and the list scrolls to the top.
  Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.
+
+
+STEP 41w - 11 client changes
+ 1. Reports: the six reports are sub-menus of Reports in the sidebar (the tab strip is gone).
+ 2. On rent by customer counts only pieces still with the customer. Rental invoice: returned pieces are left out unless "Also bill pieces returned in these dates" is ticked.
+ 3. Upgrade Assets: new type "Processor" (type the new processor, e.g. i7/10th; old one is read from the config, config is updated).
+ 4. Dead items: Inventory > In repair > tick > "Mark ticked as dead", or "Mark as dead" on the item page. Dead items are not counted, not offered, not in the All list (own "Dead" tab) and the barcode number is never reused. "Bring back" undoes it.
+ 5. Replacement: many items in one go (add/remove rows), search in every list.
+ 6. Replacement type "Upgrade / swap (not faulty)": the old item goes back to stock, not repair; no condition needed.
+ 7. Tasks: Done has an optional note, Move needs a reason; new "Task history report" (who did what and when). Sub-admins see tasks given to them only when TASK_ASSIGN_ENABLED=true (paid extra) in .env.
+ 8. Reports > Barcode history shows the result as soon as the barcode is typed/scanned.
+ 9. Reports default From = 1 April of the financial year, To = today (On rent keeps the read-only From = system start).
+10. Supplier: Payment method (Masters > Supplier). Purchase uses it automatically and it cannot be changed on the purchase.
+11. Customer: "Customer is for" (Both / Rental / Sale). Choosing a Rental customer on a new sale invoice switches the invoice type to Rental invoice.
+ NEW MIGRATIONS 000021 (task_events) and 000022 (suppliers.pay_mode, customers.purpose).
+ Server: git pull, php artisan migrate --force, php artisan optimize:clear, sudo systemctl reload php8.4-fpm, Ctrl+F5.

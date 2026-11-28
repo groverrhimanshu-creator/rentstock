@@ -29,7 +29,7 @@ class BarcodeController extends Controller
     private function base()
     {
         return DB::table('devices as d')->join('items as i', 'i.id', '=', 'd.item_id')->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')
-            ->leftJoin('categories as ct', 'ct.id', '=', 'i.category_id')->leftJoin('customers as cu', 'cu.id', '=', 'd.customer_id');
+            ->leftJoin('categories as ct', 'ct.id', '=', 'i.category_id')->leftJoin('customers as cu', 'cu.id', '=', 'd.customer_id')->where('d.status', '!=', 'dead');
     }
 
     public function index(Request $request)

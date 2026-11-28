@@ -67,11 +67,11 @@ class RentMath
 
     /* ---------- parts of a device config, for upgrades ---------- */
 
-    public const PART_TYPES = ['RAM', 'Storage', 'Part'];
+    public const PART_TYPES = ['RAM', 'Storage', 'Processor', 'Part'];
 
     public static function partLabel(string $p): string
     {
-        return ['RAM' => 'RAM', 'Storage' => 'SSD', 'Part' => 'Part replacement', 'Battery' => 'Battery'][$p] ?? $p;
+        return ['RAM' => 'RAM', 'Storage' => 'SSD', 'Processor' => 'Processor', 'Part' => 'Part replacement', 'Battery' => 'Battery'][$p] ?? $p;
     }
 
     /*
@@ -139,6 +139,9 @@ class RentMath
         if ($part === 'Storage') {
             return $ri >= 0 && isset($s[$ri + 1]) ? trim($s[$ri + 1]) : '';
         }
+        if ($part === 'Processor') {
+            return $ri > 0 ? trim(implode('/', array_slice($s, 0, $ri))) : '';   // everything before the RAM, e.g. i5/8th
+        }
         return '';
     }
 
@@ -162,6 +165,17 @@ class RentMath
         return implode('/', $s);
     }
 
+    /* The config with a new processor text (for example i7/10th) in place of everything before the RAM. Unchanged when it cannot be read. */
+    public static function procNew(string $cfg, string $text): string
+    {
+        [$s, $ri] = self::segs($cfg);
+        $text = trim($text, " /");
+        if ($ri < 1 || $text === '') {
+            return $cfg;
+        }
+        return $text . '/' . implode('/', array_slice($s, $ri));
+    }
+
     /*
      * Applies the upgrades one after the other.
      * $ups: list of ['part' => 'RAM', 'val' => int|null]. Returns a list of ['part', 'old', 'cfg_before', 'cfg_after'].
@@ -172,7 +186,7 @@ class RentMath
         $out = [];
         foreach ($ups as $u) {
             $old = self::partOld($cur, $u['part']);
-            $new = ($u['val'] ?? null) ? self::partNew($cur, $u['part'], (int) $u['val']) : $cur;
+            $new = $u['part'] === 'Processor' ? self::procNew($cur, (string) ($u['text'] ?? '')) : (($u['val'] ?? null) ? self::partNew($cur, $u['part'], (int) $u['val']) : $cur);
             $out[] = ['part' => $u['part'], 'old' => $old, 'cfg_before' => $cur, 'cfg_after' => $new];
             $cur = $new;
         }

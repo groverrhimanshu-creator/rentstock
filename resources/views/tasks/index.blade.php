@@ -4,7 +4,7 @@
 @php($can = fn ($a) => \App\Support\Perm::has('tasks.' . $a))
 @php($team_on = \App\Support\Features::taskAssign())
 @php($qs = ['scope' => $scope, 'who' => $who ?: null])
-<div class="pg"><h2>Tasks<small>A task still open after its due date shows in red, here and on the dashboard</small></h2></div>
+<div class="pg"><h2>Tasks<small>A task still open after its due date shows in red, here and on the dashboard</small></h2>@if ($manager || \App\Support\Perm::isAdmin())<a class="ab" href="{{ route('tasks.history') }}">Task history report</a>@endif</div>
 @if ($errors->any())<div class="msg bad">{{ $errors->first() }}</div>@endif
 @if ($can('create'))
 <div class="cd"><h3>Add a task</h3>
@@ -73,8 +73,8 @@
                         <div class="rowx" style="flex-wrap:wrap;gap:6px">
                             @if ($can('edit'))
                                 @if ($r->status === 'open')
-                                    <form method="post" action="{{ route('tasks.done', $r->id) }}" style="margin:0">@csrf<button class="ab sm solid">Done</button></form>
-                                    <form method="post" action="{{ route('tasks.reschedule', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ \Carbon\Carbon::parse(max($r->due_date, $today))->addDay()->toDateString() }}" style="width:140px"><button class="ab sm">Move</button></form>
+                                    <form method="post" action="{{ route('tasks.done', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input name="note" maxlength="500" placeholder="Note (optional)" style="width:150px"><button class="ab sm solid">Done</button></form>
+                                    <form method="post" action="{{ route('tasks.reschedule', $r->id) }}" style="margin:0;display:flex;gap:4px">@csrf<input type="date" name="due_date" value="{{ \Carbon\Carbon::parse(max($r->due_date, $today))->addDay()->toDateString() }}" style="width:140px"><input name="note" maxlength="500" placeholder="Reason (required)" required style="width:160px"><button class="ab sm">Move</button></form>
                                     @if ($mineOrBoss)<a class="ab sm" href="{{ route('tasks.edit', $r->id) }}">Edit</a>@endif
                                 @else
                                     <form method="post" action="{{ route('tasks.reopen', $r->id) }}" style="margin:0">@csrf<button class="ab sm">Open again</button></form>

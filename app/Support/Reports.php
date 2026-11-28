@@ -48,12 +48,19 @@ class Reports
     /* ---------- On rent by customer ---------- */
 
     /* One row per customer (or the one chosen / searched for). The count opens the list of the items on rent. */
-    /* From / to of the reports: the whole of last month unless dates are given (1st to last day of the previous calendar month). */
+    /* From / to of the reports: 1 April of this financial year to today unless dates are given. */
+    /* 1 April of the current financial year (for example 2026-04-01 from April 2026 to March 2027). */
+    public static function fyStart(): string
+    {
+        $y = (int) date('Y');
+        return ((int) date('n') >= 4 ? $y : $y - 1) . '-04-01';
+    }
+
     public static function monthRange(array $f): array
     {
         $ok = fn ($d) => is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && checkdate((int) substr($d, 5, 2), (int) substr($d, 8, 2), (int) substr($d, 0, 4));
-        $from = $ok($f['from'] ?? null) ? $f['from'] : date('Y-m-01', strtotime('first day of last month'));
-        $to = $ok($f['to'] ?? null) ? $f['to'] : date('Y-m-t', strtotime('first day of last month'));
+        $from = $ok($f['from'] ?? null) ? $f['from'] : self::fyStart();
+        $to = $ok($f['to'] ?? null) ? $f['to'] : date('Y-m-d');
         if ($from > $to) {
             [$from, $to] = [$to, $from];
         }
@@ -81,7 +88,7 @@ class Reports
     {
         return DB::table('rental_lines as l')->join('rentals as r', 'r.id', '=', 'l.rental_id')
             ->where('r.kind', 'challan')->whereNotNull('l.code')
-            ->whereRaw('date(l.from_at) <= ?', [$to])->whereRaw('(l.returned_at is null or date(l.returned_at) >= ?)', [$from]);
+            ->whereRaw('date(l.from_at) <= ?', [$to])->whereNull('l.returned_at');   // only pieces still with the customer: a returned piece is not counted
     }
 
     private static function onRent(array $f): array
@@ -103,7 +110,7 @@ class Reports
             'meta' => $rows->pluck('id')->all(),
             'customers' => DB::table('customers')->orderBy('name')->get(['id', 'name']),
             'filters' => ['cust' => $cust ?: '', 'q' => $q, 'from' => $from, 'to' => $to],
-            'note' => 'Shows the items that were on rent at any time between the two dates (default: from the first rental ever made until today). Rent per month is the monthly rent of those items.'];
+            'note' => 'Shows the items that are on rent now, given out on or before the To date (pieces already returned are not counted). Rent per month is the monthly rent of those items.'];
     }
 
     /* The pieces a customer had on rent between $from and $to: [customer name, rows]. */

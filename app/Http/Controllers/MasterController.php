@@ -73,7 +73,7 @@ class MasterController extends Controller
             ->whereIn('d.item_id', $ids)->orderBy('d.code')
             ->get(['d.code', 'd.item_id', 'd.brand_tag', 'd.config', 'd.status', 'cu.name as customer'])->groupBy('item_id');
         $qty = DB::table('item_qty')->whereIn('item_id', $ids)->pluck('qty', 'item_id');
-        $label = ['in_stock' => 'In stock', 'rented' => 'On rent', 'repair' => 'In repair', 'sold' => 'Sold'];
+        $label = ['in_stock' => 'In stock', 'rented' => 'On rent', 'repair' => 'In repair', 'sold' => 'Sold', 'dead' => 'Dead'];
         $out = [];
         foreach ($items as $i) {
             $base = [

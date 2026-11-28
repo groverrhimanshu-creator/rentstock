@@ -23,6 +23,13 @@ class TasksController extends Controller
         return $t;
     }
 
+    /* One line of the history of a task: who did what, when, and the reason they wrote. */
+    private function event(Request $request, $task, string $action, ?string $note = null, ?string $from = null, ?string $to = null): void
+    {
+        DB::table('task_events')->insert(['task_id' => $task->id, 'title' => mb_substr((string) $task->title, 0, 200), 'user_id' => $request->user()->id, 'for_user_id' => $task->user_id,
+            'action' => $action, 'note' => $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 500) : null, 'from_date' => $from, 'to_date' => $to, 'created_at' => now()]);
+    }
+
     private function date(?string $d): ?string
     {
         return is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && checkdate((int) substr($d, 5, 2), (int) substr($d, 8, 2), (int) substr($d, 0, 4)) ? $d : null;
@@ -114,9 +121,10 @@ class TasksController extends Controller
         if (!$to) {
             return back()->withInput()->withErrors(['form' => 'Choose who the task is for.']);
         }
-        DB::table('tasks')->insert(['user_id' => $to, 'created_by' => $request->user()->id, 'title' => mb_substr($title, 0, 200), 'notes' => trim((string) $request->input('notes', '')) ?: null,
+        $newId = DB::table('tasks')->insertGetId(['user_id' => $to, 'created_by' => $request->user()->id, 'title' => mb_substr($title, 0, 200), 'notes' => trim((string) $request->input('notes', '')) ?: null,
             'due_date' => $due, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
-        \App\Support\Audit::log('add', 'task', (string) DB::getPdo()->lastInsertId(), mb_substr($title, 0, 80) . ' · for ' . DB::table('users')->where('id', $to)->value('name') . ' · due ' . $due);
+        $this->event($request, DB::table('tasks')->where('id', $newId)->first(), 'added', trim((string) $request->input('notes', '')), null, $due);
+        \App\Support\Audit::log('add', 'task', (string) $newId, mb_substr($title, 0, 80) . ' · for ' . DB::table('users')->where('id', $to)->value('name') . ' · due ' . $due);
         return redirect()->route('tasks.index', $to === $request->user()->id ? [] : ['scope' => 'given'])->with('ok', 'Task added');
     }
 
@@ -139,21 +147,24 @@ class TasksController extends Controller
         }
         DB::table('tasks')->where('id', $id)->update(['title' => mb_substr($title, 0, 200), 'notes' => trim((string) $request->input('notes', '')) ?: null,
             'due_date' => $due, 'user_id' => $to, 'moved' => $t->moved + ($due !== $t->due_date ? 1 : 0), 'updated_at' => now()]);
+        $this->event($request, DB::table('tasks')->where('id', $id)->first(), 'edited', null, $t->due_date, $due);
         return redirect()->route('tasks.index')->with('ok', 'Task updated');
     }
 
     public function done(Request $request, int $id)
     {
-        $this->task($request, $id);
+        $t = $this->task($request, $id);
         DB::table('tasks')->where('id', $id)->update(['status' => 'done', 'done_at' => now(), 'updated_at' => now()]);
+        $this->event($request, $t, 'done', (string) $request->input('note', ''));
         \App\Support\Audit::log('edit', 'task', $id, 'Marked done');
         return back()->with('ok', 'Task marked done');
     }
 
     public function reopen(Request $request, int $id)
     {
-        $this->task($request, $id);
+        $t = $this->task($request, $id);
         DB::table('tasks')->where('id', $id)->update(['status' => 'open', 'done_at' => null, 'updated_at' => now()]);
+        $this->event($request, $t, 'reopened', (string) $request->input('note', ''));
         return back()->with('ok', 'Task opened again');
     }
 
@@ -164,9 +175,41 @@ class TasksController extends Controller
         if (!$due) {
             return back()->withErrors(['form' => 'Choose a valid new date.']);
         }
+        $why = trim((string) $request->input('note', ''));
+        if ($why === '') {
+            return back()->withErrors(['form' => 'Write the reason for moving the task to another date.']);
+        }
         DB::table('tasks')->where('id', $id)->update(['due_date' => $due, 'moved' => $t->moved + 1, 'updated_at' => now()]);
+        $this->event($request, $t, 'moved', $why, $t->due_date, $due);
         \App\Support\Audit::log('edit', 'task', $id, 'Moved from ' . $t->due_date . ' to ' . $due);
         return back()->with('ok', 'Task moved to ' . \Carbon\Carbon::parse($due)->format('d/m/Y'));
+    }
+
+    /* The report: every action on every task, newest first. Only for those who manage tasks (the Admin). */
+    public function history(Request $request)
+    {
+        abort_unless(Perm::has('tasks.manage') || Perm::isAdmin(), 403);
+        $who = (int) $request->query('who', 0);
+        $act = in_array($request->query('a'), ['added', 'done', 'moved', 'reopened', 'edited'], true) ? $request->query('a') : '';
+        $q = DB::table('task_events as e')->leftJoin('users as u', 'u.id', '=', 'e.user_id')->leftJoin('users as w', 'w.id', '=', 'e.for_user_id')
+            ->select('e.*', 'u.name as by_name', 'w.name as for_name');
+        if ($who) {
+            $q->where(fn ($x) => $x->where('e.user_id', $who)->orWhere('e.for_user_id', $who));
+        }
+        if ($act) {
+            $q->where('e.action', $act);
+        }
+        if ($from = $this->date($request->query('from'))) {
+            $q->whereDate('e.created_at', '>=', $from);
+        }
+        if ($to = $this->date($request->query('to'))) {
+            $q->whereDate('e.created_at', '<=', $to);
+        }
+        if (trim((string) $request->query('q', '')) !== '') {
+            $q->where('e.title', 'like', '%' . trim((string) $request->query('q')) . '%');
+        }
+        return view('tasks.history', ['rows' => $q->orderByDesc('e.id')->paginate(30)->withQueryString(), 'staff' => $this->staff(), 'who' => $who, 'act' => $act,
+            'from' => $from, 'to' => $to, 'q' => trim((string) $request->query('q', ''))]);
     }
 
     public function destroy(Request $request, int $id)

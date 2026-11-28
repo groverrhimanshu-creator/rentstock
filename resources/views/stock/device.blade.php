@@ -20,6 +20,17 @@
         <button class="ab solid" onclick="return confirm('Put this item back in stock?')">Repaired, put back in stock</button></div>
 </form>
 @endif
+@if (in_array($d->status, ['repair', 'in_stock'], true) && \App\Support\Perm::has('stock.repair'))
+<form class="cd noprint" method="post" action="{{ route('stock.device.dead', $d->code) }}" style="margin-bottom:12px">@csrf
+    <div class="rowx" style="align-items:flex-end;flex-wrap:wrap"><label class="f" style="flex:1;min-width:240px"><span>Cannot be repaired? Write it off as dead (note, optional)</span><input name="note" maxlength="200" placeholder="for example: motherboard burnt"></label>
+        <button class="ab danger" onclick="return confirm('Mark this item as DEAD? It will not be counted or offered anywhere.')">Mark as dead</button></div>
+</form>
+@endif
+@if ($d->status === 'dead' && \App\Support\Perm::has('stock.repair'))
+<form class="cd noprint" method="post" action="{{ route('stock.device.revive', $d->code) }}" style="margin-bottom:12px">@csrf
+    <div class="rowx" style="align-items:center"><span>This item is written off as dead.</span><button class="ab" onclick="return confirm('Bring this item back (to In repair)?')">Marked by mistake: bring back</button></div>
+</form>
+@endif
 <div class="cols">
     <div class="cd"><h3>Details</h3>
         <div class="sumb">

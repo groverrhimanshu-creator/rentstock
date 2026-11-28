@@ -7,7 +7,8 @@
 
     /* the same rules as the server: the first segment like 8gb is the RAM, the next one is the storage */
     function segs(cfg) { var s = String(cfg || '').split('/'), ri = -1; for (var i = 0; i < s.length; i++) { if (/^\s*\d+\s*gb\s*$/i.test(s[i])) { ri = i; break; } } return { s: s, ri: ri }; }
-    function partOld(cfg, p) { var g = segs(cfg); if (p === 'RAM') { return g.ri >= 0 ? g.s[g.ri].trim() : ''; } if (p === 'Storage') { return g.ri >= 0 && g.s[g.ri + 1] != null ? g.s[g.ri + 1].trim() : ''; } return ''; }
+    function partOld(cfg, p) { var g = segs(cfg); if (p === 'RAM') { return g.ri >= 0 ? g.s[g.ri].trim() : ''; } if (p === 'Storage') { return g.ri >= 0 && g.s[g.ri + 1] != null ? g.s[g.ri + 1].trim() : ''; } if (p === 'Processor') { return g.ri > 0 ? g.s.slice(0, g.ri).join('/').trim() : ''; } return ''; }
+    function procNew(cfg, t) { var g = segs(cfg); t = String(t || '').replace(/^[\s\/]+|[\s\/]+$/g, ''); if (g.ri < 1 || !t) { return cfg; } return t + '/' + g.s.slice(g.ri).join('/'); }
     function partNew(cfg, p, v) {
         var g = segs(cfg); if (g.ri < 0) { return cfg; }
         if (p === 'RAM') { g.s[g.ri] = v + 'gb'; }
@@ -21,14 +22,15 @@
         var cur = dev.config, rows = '', after = dev.config;
         ups.forEach(function (u, i) {
             var old = partOld(cur, u.part), it = item(u.part, u.id), nxt = cur;
-            if (it && it.val) { nxt = partNew(cur, u.part, it.val); }
+            if (u.part === 'Processor') { nxt = procNew(cur, u.text); } else if (it && it.val) { nxt = partNew(cur, u.part, it.val); }
             var typeSel = '<select data-i="' + i + '" data-f="part">' + C.types.map(function (t) { return '<option value="' + t.key + '"' + (u.part === t.key ? ' selected' : '') + '>' + esc(t.label) + '</option>'; }).join('') + '</select>';
             var hidden = '<input type="hidden" name="ups[' + i + '][part]" value="' + u.part + '">';
             var del = '<td>' + (ups.length > 1 ? '<button type="button" class="ab sm danger" data-del="' + i + '">Remove</button>' : '') + '</td>';
-            if (u.part === 'Part') {
+            if (u.part === 'Part' || u.part === 'Processor') {
+                var isP = u.part === 'Processor';
                 rows += '<tr><td>' + typeSel + '</td><td><input class="cell" style="text-align:left" readonly value="-"></td>' +
-                    '<td><input class="cell" style="text-align:left;width:100%" maxlength="60" name="ups[' + i + '][text]" data-i="' + i + '" data-f="text" placeholder="Which part was replaced? e.g. Battery, Keyboard" value="' + esc(u.text || '') + '">' +
-                    '<select name="ups[' + i + '][item_id]" data-i="' + i + '" data-f="id" style="margin-top:6px"><option value="">Not taken from stock</option>' + (parts.Part || []).map(function (x) { return '<option value="' + x.id + '"' + (String(u.id) === String(x.id) ? ' selected' : '') + '>Take from stock: ' + esc(x.label) + ' · ' + x.qty + ' in stock</option>'; }).join('') + '</select>' + hidden + '</td>' + del + '</tr>';
+                    '<td><input class="cell" style="text-align:left;width:100%" maxlength="60" name="ups[' + i + '][text]" data-i="' + i + '" data-f="text" placeholder="' + (isP ? 'New processor, e.g. i7/10th' : 'Which part was replaced? e.g. Battery, Keyboard') + '" value="' + esc(u.text || '') + '">' +
+                    '<select name="ups[' + i + '][item_id]" data-i="' + i + '" data-f="id" style="margin-top:6px"><option value="">Not taken from stock</option>' + (parts[u.part] || []).map(function (x) { return '<option value="' + x.id + '"' + (String(u.id) === String(x.id) ? ' selected' : '') + '>Take from stock: ' + esc(x.label) + ' · ' + x.qty + ' in stock</option>'; }).join('') + '</select>' + hidden + '</td>' + del + '</tr>';
             } else {
                 rows += '<tr><td>' + typeSel + '</td><td><input class="cell" style="text-align:left" readonly value="' + esc(old || 'Not recorded') + '"></td>' +
                     '<td><select name="ups[' + i + '][item_id]" data-i="' + i + '" data-f="id"><option value="">Select from stock</option>' + (parts[u.part] || []).map(function (x) { return '<option value="' + x.id + '"' + (String(u.id) === String(x.id) ? ' selected' : '') + '>' + esc(x.label) + ' · ' + x.qty + ' in stock</option>'; }).join('') + '</select>' + hidden + '</td>' + del + '</tr>';
@@ -69,8 +71,9 @@
         if (!dev) { e.preventDefault(); err('Find the device first.'); return; }
         var seen = {};
         for (var i = 0; i < ups.length; i++) {
-            if (ups[i].part === 'Part') {
-                if (!String(ups[i].text || '').trim()) { e.preventDefault(); err('Write which part was replaced (for example Battery or Keyboard).'); return; }
+            if (ups[i].part === 'Part' || ups[i].part === 'Processor') {
+                if (!String(ups[i].text || '').trim()) { e.preventDefault(); err(ups[i].part === 'Processor' ? 'Write the new processor (for example i7/10th).' : 'Write which part was replaced (for example Battery or Keyboard).'); return; }
+                if (ups[i].part === 'Processor') { if (seen.Processor) { e.preventDefault(); err('The processor can be changed only once in one upgrade.'); return; } seen.Processor = 1; }
                 continue;
             }
             if (!ups[i].id) { e.preventDefault(); err('Choose the new RAM or SSD from stock in every row.'); return; }

@@ -1,89 +1,153 @@
-/* New replacement: the faulty item, then a working one from stock of the same category only (same model first), or search inside that category. */
+/* New replacement: one or many items. Each row has the item coming back (searchable) and the item to give (searchable, same category only).
+   Type "Upgrade / swap" is for a working item that is swapped for a better one: it goes straight back to stock. */
 (function () {
-    var C = window.REP, $ = function (id) { return document.getElementById(id); }, data = { olds: [], info: null, same: [], cat: [], catTotal: 0 }, picked = null, timer;
+    var C = window.REP, $ = function (id) { return document.getElementById(id); }, olds = [], rows = [], uid = 0, timers = {};
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-    function err(m) { var b = $('clienterr'); b.textContent = m || ''; b.hidden = !m; }
+    function err(m) { var b = $('clienterr'); b.textContent = m || ''; b.hidden = !m; if (m) { window.scrollTo(0, 0); } }
     function get(url) { return fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
-    function sold() { return $('kind').value !== C.rental; }
+    function sold() { return $('kind').value === C.sale; }
+    function upg() { return $('kind').value === C.upgrade; }
     function opt(x, sel) { return '<option value="' + x.code + '"' + (String(sel) === String(x.code) ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }
+    function words(q) { q = (q || '').trim().toLowerCase(); return q ? q.split(/\s+/) : []; }
+    function match(label, w) { label = label.toLowerCase(); return w.every(function (t) { return label.indexOf(t) >= 0; }); }
 
-    /* the faulty-item list, narrowed by what is typed in its search box (the chosen item always stays in the list) */
-    function fillOld(sel) {
-        var q = ($('oldq').value || '').trim().toLowerCase(), words = q ? q.split(/\s+/) : [];
-        var list = data.olds.filter(function (x) { var l = x.label.toLowerCase(); return String(x.code) === String(sel) || words.every(function (w) { return l.indexOf(w) >= 0; }); });
-        $('old').innerHTML = '<option value="">' + (words.length ? list.length + ' found' : 'Select') + '</option>' + list.map(function (x) { return opt(x, sel); }).join('');
-        if (words.length && list.length === 1 && !sel) { $('old').value = String(list[0].code); }
+    function usedOld(except) { return rows.filter(function (r) { return r !== except && r.old; }).map(function (r) { return String(r.old); }); }
+    function usedNew(except) { return rows.filter(function (r) { return r !== except && r.new; }).map(function (r) { return String(r.new); }); }
+
+    function fillOld(r) {
+        var w = words(r.oldq.value), taken = usedOld(r), sel = r.oldSel.value || r.old;
+        var list = olds.filter(function (x) { return String(x.code) === String(sel) || (taken.indexOf(String(x.code)) < 0 && match(x.label, w)); });
+        r.oldSel.innerHTML = '<option value="">' + (w.length ? list.length + ' found' : 'Select') + '</option>' + list.map(function (x) { return opt(x, sel); }).join('');
+        if (w.length && list.length === 1 && !sel) { r.oldSel.value = String(list[0].code); changedOld(r); }
     }
-    $('oldq').addEventListener('input', function () { var cur = $('old').value; fillOld(cur); if (!cur && $('old').value) { $('old').dispatchEvent(new Event('change')); } });
-    $('oldq').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if ($('old').value) { $('old').dispatchEvent(new Event('change')); } } });
-    function paint(keepNew) {
-        var oldv = $('old').value, newv = keepNew != null ? keepNew : $('new').value;
-        $('kindnote').textContent = sold()
-            ? 'The faulty item returns to stock (repair) and a credit note is made. The new item is sold to the customer.'
-            : 'The faulty item goes to repair. The new item is rented to the same customer at the same rent. The customer sees the change in their login.';
-        fillOld(oldv);
-        var ni = data.info, sel = $('new');
-        if (!ni) {
-            sel.disabled = true; $('newq').disabled = true; sel.innerHTML = '<option value="">Choose the faulty item first</option>';
-            $('searchbox').hidden = true; $('note').innerHTML = ''; return;
-        }
-        sel.disabled = false; $('newq').disabled = false;
-        var inList = data.same.concat(data.cat).some(function (x) { return String(x.code) === String(newv); });
-        var html = '<option value="">Select</option>';
-        if (data.same.length) { html += '<optgroup label="Same model (' + data.same.length + ' in stock)">' + data.same.map(function (x) { return opt(x, newv); }).join('') + '</optgroup>'; }
-        if (data.cat.length) { html += '<optgroup label="Same category, other model or brand (' + data.catTotal + ' in stock)">' + data.cat.map(function (x) { return opt(x, newv); }).join('') + '</optgroup>'; }
-        if (picked && !inList) { html += '<optgroup label="Picked from search">' + opt(picked, newv) + '</optgroup>'; }
+    function fillNew(r) {
+        var sel = r.newSel;
+        if (!r.info) { sel.disabled = true; r.newq.disabled = true; sel.innerHTML = '<option value="">Choose the item coming back first</option>'; r.note.textContent = ''; return; }
+        sel.disabled = false; r.newq.disabled = false;
+        var w = words(r.newq.value), taken = usedNew(r), cur = r.new;
+        var ok = function (x) { return String(x.code) === String(cur) || (taken.indexOf(String(x.code)) < 0 && match(x.label, w)); };
+        var same = r.same.filter(ok), cat = r.cat.filter(ok), extra = (r.extra || []).filter(function (x) { return ok(x) && !same.concat(cat).some(function (y) { return y.code === x.code; }); });
+        var html = '<option value="">' + (w.length ? same.length + cat.length + extra.length + ' found' : 'Select') + '</option>';
+        if (same.length) { html += '<optgroup label="Same model (' + same.length + ')">' + same.map(function (x) { return opt(x, cur); }).join('') + '</optgroup>'; }
+        if (cat.length) { html += '<optgroup label="Same category, other model or brand (' + cat.length + ')">' + cat.map(function (x) { return opt(x, cur); }).join('') + '</optgroup>'; }
+        if (extra.length) { html += '<optgroup label="Search result">' + extra.map(function (x) { return opt(x, cur); }).join('') + '</optgroup>'; }
         sel.innerHTML = html;
-        if (newv && !sel.value && picked && String(picked.code) === String(newv)) { sel.value = String(newv); }
-        $('searchbox').hidden = false;
-        $('note').innerHTML = data.same.length
-            ? '<div class="msg info">' + data.same.length + ' of the same model (' + esc(ni.model) + ') are in stock. Other items of the same category are listed after them.</div>'
-            : '<div class="msg">No ' + esc(ni.model) + ' in stock. Other items of the same category (' + esc(ni.cat) + ') are listed instead, or search this category below.</div>';
+        if (cur) { sel.value = String(cur); }
+        r.note.textContent = r.same.length ? r.same.length + ' of the same model in stock.' : 'No ' + r.info.model + ' in stock, other items of the same category (' + r.info.cat + ') are listed.';
     }
-    function load(keepOld, keepNew) {
-        var cid = $('customer').value, old = keepOld != null ? keepOld : $('old').value;
-        if (!cid) { data = { olds: [], info: null, same: [], cat: [], catTotal: 0 }; picked = null; paint(''); return; }
-        get(C.dataUrl + '?kind=' + encodeURIComponent($('kind').value) + '&customer_id=' + encodeURIComponent(cid) + '&old=' + encodeURIComponent(old || '')).then(function (r) {
+    function refillAll() { rows.forEach(function (r) { fillOld(r); fillNew(r); }); }
+
+    function changedOld(r) {
+        r.old = r.oldSel.value; r.new = ''; r.info = null; r.same = []; r.cat = []; r.extra = [];
+        if (!r.old) { refillAll(); return; }
+        var cid = $('customer').value;
+        get(C.dataUrl + '?kind=' + encodeURIComponent(sold() ? C.sale : C.rental) + '&customer_id=' + encodeURIComponent(cid) + '&old=' + encodeURIComponent(r.old)).then(function (d) {
+            if (r.oldSel.value !== r.old) { return; }
+            r.info = d.info; r.same = d.same || []; r.cat = d.cat || [];
+            refillAll();
+        });
+        refillAll();
+    }
+    function searchExtra(r) {
+        clearTimeout(timers[r.id]);
+        timers[r.id] = setTimeout(function () {
+            var q = r.newq.value.trim();
+            if (!r.info || q.length < 2) { r.extra = []; fillNew(r); return; }
+            get(C.stockUrl + '?limit=40&q=' + encodeURIComponent(q) + '&category=' + encodeURIComponent(r.info.category_id || '') + '&exclude=' + encodeURIComponent(r.old)).then(function (d) {
+                if (r.newq.value.trim() !== q) { return; }
+                r.extra = (d.rows || []).map(function (x) { return { code: x.code, label: x.bc + ' · ' + x.model + ' · ' + x.config }; });
+                fillNew(r);
+                if (!r.extra.length && !r.same.concat(r.cat).some(function (x) { return match(x.label, words(q)); })) { r.note.textContent = 'Nothing in this category matches "' + q + '". It may be in another category (a replacement must be of the same category) or not in stock.'; }
+            });
+        }, 250);
+    }
+
+    function addRow() {
+        var r = { id: ++uid, old: '', new: '', info: null, same: [], cat: [], extra: [] }, i = rows.length;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="rn"></td>' +
+            '<td><input type="search" class="ctl oldq" placeholder="Search: barcode, model or brand tag" style="margin-bottom:6px"><select class="olds"><option value="">Select</option></select> <button type="button" class="ab sm scan-old">Scan</button></td>' +
+            '<td><input type="search" class="ctl newq" placeholder="Search: barcode, brand or model" style="margin-bottom:6px" disabled><select class="news" disabled><option value="">Choose the item coming back first</option></select> <button type="button" class="ab sm scan-new">Scan</button><div class="hint nnote"></div></td>' +
+            '<td class="cond"><select class="fault"><option value="">Select</option>' + C.faults.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('') + '</select></td>' +
+            '<td><button type="button" class="ab sm danger rm">Remove</button></td>';
+        r.tr = tr; r.oldq = tr.querySelector('.oldq'); r.oldSel = tr.querySelector('.olds'); r.newq = tr.querySelector('.newq'); r.newSel = tr.querySelector('.news'); r.fault = tr.querySelector('.fault'); r.note = tr.querySelector('.nnote');
+        function scan(btn, title, inp, sel, refill) {
+            btn.addEventListener('click', function () {
+                if (!window.CamScan) { return; }
+                window.CamScan.open({ title: title, onCode: function (code) {
+                    var d = String(code).replace(/\D/g, ''), o = null;
+                    if (!d) { return { ok: false, msg: code + ' is not a barcode of this system.' }; }
+                    if (sel.disabled) { return { ok: false, msg: 'Please choose the item coming back first.' }; }
+                    inp.value = ''; refill();
+                    Array.prototype.forEach.call(sel.options, function (x) { if (String(x.value) === String(parseInt(d, 10))) { o = x; } });
+                    if (!o) { return { ok: false, msg: code + ' is not in this list.' }; }
+                    sel.value = o.value; sel.dispatchEvent(new Event('change'));
+                    return { ok: true, close: true, msg: o.textContent.trim() + ' selected' };
+                } });
+            });
+        }
+        scan(tr.querySelector('.scan-old'), 'Scan the item coming back', r.oldq, r.oldSel, function () { fillOld(r); });
+        scan(tr.querySelector('.scan-new'), 'Scan the item to give', r.newq, r.newSel, function () { fillNew(r); });
+        r.oldq.addEventListener('input', function () { fillOld(r); });
+        r.oldq.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); } });
+        r.oldSel.addEventListener('change', function () { changedOld(r); });
+        r.newq.addEventListener('input', function () { fillNew(r); searchExtra(r); });
+        r.newq.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); } });
+        r.newSel.addEventListener('change', function () { r.new = r.newSel.value; refillAll(); });
+        r.fault.addEventListener('change', function () { r.faultv = r.fault.value; });
+        tr.querySelector('.rm').addEventListener('click', function () { rows.splice(rows.indexOf(r), 1); tr.remove(); number(); refillAll(); });
+        rows.push(r); $('rrows').appendChild(tr); number(); fillOld(r); fillNew(r);
+        return r;
+    }
+    function number() {
+        rows.forEach(function (r, i) {
+            r.tr.querySelector('.rn').textContent = i + 1;
+            r.oldSel.name = 'rows[' + i + '][old_code]'; r.newSel.name = 'rows[' + i + '][new_code]'; r.fault.name = 'rows[' + i + '][fault]';
+            r.tr.querySelector('.rm').style.display = rows.length > 1 ? '' : 'none';
+        });
+        $('rcount').textContent = rows.length;
+        $('addrow').hidden = rows.length >= 50;
+    }
+    function kindUi() {
+        var u = upg();
+        $('kindnote').textContent = u
+            ? 'Upgrade / swap: the item is NOT faulty. The customer gets a better item in its place at the same rent, and the old item goes straight back to stock (not to repair).'
+            : (sold() ? 'The faulty item returns to stock (repair) and a credit note is made. The new item is sold to the customer.'
+                : 'The faulty item goes to repair. The new item is rented to the same customer at the same rent. The customer sees the change in their login.');
+        $('reasonlab').textContent = u ? 'Reason for the upgrade' : 'Reason';
+        $('reason').placeholder = u ? 'For example: upgraded to i7' : 'What is wrong with the item';
+        $('condh').hidden = u;
+        rows.forEach(function (r) { r.tr.querySelector('.cond').hidden = u; r.fault.required = !u; });
+    }
+    function load() {
+        var cid = $('customer').value;
+        olds = [];
+        rows.forEach(function (r) { r.tr.remove(); }); rows = [];
+        if (!cid) { addRow(); kindUi(); return; }
+        get(C.dataUrl + '?kind=' + encodeURIComponent(sold() ? C.sale : C.rental) + '&customer_id=' + encodeURIComponent(cid)).then(function (d) {
             if ($('customer').value !== cid) { return; }
-            data = r;
-            if (old && !r.olds.some(function (x) { return String(x.code) === String(old); })) { old = ''; }
-            fillOld(old);
-            if (!old) { data.info = null; }
-            paint(keepNew != null ? keepNew : '');
+            olds = d.olds || [];
+            addRow(); kindUi();
         });
     }
-    $('kind').addEventListener('change', function () { picked = null; load(''); });
-    $('customer').addEventListener('change', function () { picked = null; load(''); });
-    $('old').addEventListener('change', function () { picked = null; $('repq').value = ''; $('sug').innerHTML = ''; load($('old').value, ''); });
-
-    $('newq').addEventListener('input', function () { $('repq').value = $('newq').value; $('repq').dispatchEvent(new Event('input')); });
-    $('repq').addEventListener('input', function () { if ($('newq').value !== $('repq').value) { $('newq').value = $('repq').value; } });
-    $('repq').addEventListener('input', function () {
-        clearTimeout(timer);
-        timer = setTimeout(function () {
-            var q = $('repq').value.trim(), box = $('sug');
-            if (q.length < 2) { box.innerHTML = ''; return; }
-            get(C.stockUrl + '?limit=8&q=' + encodeURIComponent(q) + '&category=' + encodeURIComponent((data.info && data.info.category_id) || '') + '&exclude=' + encodeURIComponent($('old').value)).then(function (r) {
-                if ($('repq').value.trim() !== q) { return; }
-                box.innerHTML = '<div class="sug">' + (r.rows.length ? r.rows.map(function (x) {
-                    return '<div class="sugrow"><span class="bc">' + esc(x.bc) + '</span><span class="sgt">' + esc(x.model) + ' · ' + esc(x.brand) + ' · ' + esc(x.config) + '</span><button type="button" class="ab sm solid" data-use="' + x.code + '">' + (String($('new').value) === String(x.code) ? 'Selected' : 'Use this') + '</button></div>';
-                }).join('') + (r.total > 8 ? '<div class="sugmore">' + (r.total - 8) + ' more. Keep typing to narrow it down.</div>' : '') : '<div class="sugmore">Nothing in this category matches "' + esc(q) + '". It may be in stock under another category (a replacement must be of the same category as the faulty item) or not in stock.</div>') + '</div>';
-                box.__rows = r.rows;
-            });
-        }, 200);
-    });
-    $('sug').addEventListener('click', function (e) {
-        var c = e.target.getAttribute('data-use');
-        if (c == null) { return; }
-        var x = ($('sug').__rows || []).filter(function (r) { return String(r.code) === c; })[0];
-        if (!x) { return; }
-        picked = { code: x.code, label: x.bc + ' · ' + x.model + ' · ' + x.config };
-        paint(String(x.code)); $('sug').innerHTML = ''; $('repq').value = ''; $('newq').value = '';
-    });
+    $('kind').addEventListener('change', function () { load(); });
+    $('customer').addEventListener('change', load);
+    $('addrow').addEventListener('click', function () { addRow(); kindUi(); });
     $('pf').addEventListener('submit', function (e) {
-        if (!$('customer').value) { e.preventDefault(); err('Please choose a customer.'); return; }
-        if (!$('old').value || !$('new').value) { e.preventDefault(); err('Choose the faulty item and its replacement.'); }
+        var m = '';
+        if (!$('customer').value) { m = 'Please choose a customer.'; }
+        else if (!$('reason').value.trim()) { m = upg() ? 'Please enter the reason for the upgrade.' : 'Please enter the reason for the replacement.'; }
+        else {
+            var used = rows.filter(function (r) { return r.oldSel.value || r.newSel.value; });
+            if (!used.length) { m = 'Choose the item coming back and the item to give.'; }
+            used.some(function (r, i) {
+                if (!r.oldSel.value || !r.newSel.value) { m = 'Row ' + (rows.indexOf(r) + 1) + ': choose the item coming back and the item to give.'; return true; }
+                if (!upg() && !r.fault.value) { m = 'Row ' + (rows.indexOf(r) + 1) + ': choose whether the item is Damaged or Faulty.'; return true; }
+                return false;
+            });
+        }
+        if (m) { e.preventDefault(); e.stopImmediatePropagation(); err(m); }
     });
-    paint('');
-    if ($('customer').value) { load(C.oldSel, C.newSel); }
+    addRow(); kindUi();
+    if ($('customer').value) { load(); }
 })();

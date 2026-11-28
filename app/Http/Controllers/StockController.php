@@ -35,6 +35,8 @@ class StockController extends Controller
             ->select('d.code', 'd.brand_tag', 'd.config', 'd.status', 'i.name as model', 'c.name as customer');
         if ($status !== '') {
             $query->where('d.status', $status);
+        } else {
+            $query->where('d.status', '!=', 'dead');   // dead items are kept out of the full list; see the Dead tab
         }
         $itemId = (int) $request->query('item', 0);
         $itemName = '';
@@ -180,6 +182,30 @@ class StockController extends Controller
         abort_unless(DB::table('devices')->where('code', $code)->exists(), 404);
         $n = Stock::markRepaired([$code], mb_substr(trim((string) $request->input('note', '')), 0, 200), $request->user()->id);
         return redirect()->route('stock.device', $code)->with($n ? 'ok' : 'bad', $n ? Barcodes::text($code) . ' is repaired and back in stock.' : Barcodes::text($code) . ' is not in repair.');
+    }
+
+    /* Write a faulty piece off as dead. */
+    public function dead(Request $request, int $code)
+    {
+        abort_unless(DB::table('devices')->where('code', $code)->exists(), 404);
+        $n = Stock::markDead([$code], mb_substr(trim((string) $request->input('note', '')), 0, 200), $request->user()->id);
+        return redirect()->route('stock.device', $code)->with($n ? 'ok' : 'bad', $n ? Barcodes::text($code) . ' is marked dead and is no longer counted.' : 'Only an item in repair or in stock can be marked dead.');
+    }
+
+    public function deadMany(Request $request)
+    {
+        $codes = array_map('intval', (array) $request->input('codes', []));
+        if (!$codes) {
+            return back()->with('bad', 'Tick at least one item.');
+        }
+        $n = Stock::markDead($codes, mb_substr(trim((string) $request->input('note', '')), 0, 200), $request->user()->id);
+        return redirect()->route('stock.inventory', ['status' => 'repair'])->with($n ? 'ok' : 'bad', $n ? $n . ' ' . ($n === 1 ? 'item is' : 'items are') . ' marked dead.' : 'None of those items can be marked dead.');
+    }
+
+    public function revive(Request $request, int $code)
+    {
+        $ok = Stock::reviveDead($code, $request->user()->id);
+        return redirect()->route('stock.device', $code)->with($ok ? 'ok' : 'bad', $ok ? 'Brought back. It is now in repair.' : 'This item is not marked dead.');
     }
 
     /* Several repaired pieces at once (ticked on Inventory > In repair). */

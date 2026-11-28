@@ -10,9 +10,7 @@
     </div>
 </div>
 <div class="cd">
-    <div class="tabsx">
-        @foreach ($tabs as $i => $t)<a href="{{ route('reports.index', ['tab' => $i]) }}" aria-selected="{{ $i === $tab ? 'true' : 'false' }}">{{ $t }}</a>@endforeach
-    </div>
+    <h3 style="margin:0 0 10px">{{ $tabs[$tab] }}</h3>
     <form method="get" action="{{ route('reports.index') }}" class="lt" style="flex-wrap:wrap;align-items:flex-end;gap:10px"><input type="hidden" name="tab" value="{{ $tab }}">
         <label class="f" style="min-width:280px;flex:1;max-width:420px"><span>Barcode, or brand / service tag</span><input type="search" name="q" value="{{ $data['q'] }}" placeholder="for example {{ \App\Support\Barcodes::prefix() }}600001" maxlength="60" autocomplete="off" autofocus data-camscan="Scan the barcode" data-camscan-submit></label>
         <button class="ab sm solid">Show history</button>
@@ -101,4 +99,17 @@
         </script>
     @endif
 </div>
+<script>
+(function () {
+    var q = document.querySelector('input[name=q]'), t, last = q ? q.value : '';
+    if (!q) { return; }
+    q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+    /* show the result as soon as a barcode is typed or scanned (the scanner's Enter also works) */
+    q.addEventListener('input', function () {
+        clearTimeout(t);
+        var v = q.value.trim();
+        if (v.length >= 6 && v !== last) { t = setTimeout(function () { q.form.submit(); }, 700); }
+    });
+})();
+</script>
 @endsection

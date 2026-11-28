@@ -135,7 +135,7 @@ class RentalController extends Controller
         if ((strtotime($to) - strtotime($from)) / 86400 > 366) {
             return response()->json(['rows' => [], 'error' => 'A rental invoice can cover 366 days at most.']);
         }
-        $rows = Rentals::billLines($cid, $from, $to, $request->query('full', '1') !== '0');
+        $rows = Rentals::billLines($cid, $from, $to, $request->query('full', '1') !== '0', $request->query('incl') === '1');
         if ($rows) {
             return response()->json(['rows' => $rows]);
         }

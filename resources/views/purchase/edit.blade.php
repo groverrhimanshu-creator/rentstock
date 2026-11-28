@@ -7,12 +7,12 @@
     @csrf @method('PUT')
     <div class="cd"><h3>Purchase details</h3>
         <div class="fg">
-            <label class="f"><span>Supplier</span><select name="supplier_id" id="supplier">@foreach ($suppliers as $s)<option value="{{ $s->id }}" data-state="{{ $s->state_code }}" @selected((string) old('supplier_id', $p->supplier_id) === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>
+            <label class="f"><span>Supplier</span><select name="supplier_id" id="supplier">@foreach ($suppliers as $s)<option value="{{ $s->id }}" data-state="{{ $s->state_code }}" data-pay="{{ $s->pay_mode }}" @selected((string) old('supplier_id', $p->supplier_id) === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>
             <label class="f"><span>Supplier invoice no</span><input name="inv_no" value="{{ old('inv_no', $p->inv_no) }}" maxlength="60"></label>
             <label class="f"><span>Remark</span><input name="remark" value="{{ old('remark', $p->remark) }}" maxlength="255"></label>
             <label class="f"><span>Invoice date</span><input type="date" name="inv_date" value="{{ old('inv_date', $p->inv_date) }}"></label>
             <label class="f"><span>Type</span><select name="type" id="type">@foreach (['GST', 'Bill of supply'] as $o)<option @selected(old('type', $p->type) === $o)>{{ $o }}</option>@endforeach</select></label>
-            <label class="f"><span>Payment mode</span><select name="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', $p->pay_mode) === $o)>{{ $o }}</option>@endforeach</select></label>
+            <label class="f"><span>Payment mode</span><select name="pay_mode" id="pay_mode">@foreach (['Cash', 'Cheque/Online', 'Credit'] as $o)<option @selected(old('pay_mode', $p->pay_mode) === $o)>{{ $o }}</option>@endforeach</select></label>
             <label class="f"><span>Supplier invoice @if ($p->invoice_file)(attached: <a href="{{ route('purchase.invoice', $p->id) }}" target="_blank">{{ $p->invoice_file_name ?: 'view' }}</a>)@endif</span><input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
                 @if ($p->invoice_file)<small><label><input type="checkbox" name="remove_invoice" value="1"> Remove the attached invoice</label> &middot; choosing a file replaces it</small>@endif</label>
             <label class="f"><span>Store</span><select name="store_id">@foreach ($stores as $s)<option value="{{ $s->id }}" @selected((string) old('store_id', $p->store_id) === (string) $s->id)>{{ $s->name }}</option>@endforeach</select></label>

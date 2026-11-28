@@ -13,6 +13,7 @@ class Stock
         'rented' => ['On rent', 'info'],
         'repair' => ['In repair', 'warn'],
         'sold' => ['Sold', 'idle'],
+        'dead' => ['Dead (written off)', 'bad'],
     ];
 
     public static function pill(string $status): string
@@ -46,6 +47,43 @@ class Stock
             Audit::log('edit', 'repair', count($ready) === 1 ? Barcodes::text($ready[0]) : count($ready) . ' items', 'Back in stock' . ($note !== '' ? ': ' . $note : ''));
             return count($ready);
         });
+    }
+
+    /*
+     * A faulty piece that cannot be repaired is written off as dead. It stays in the history, but it is no longer counted or offered anywhere
+     * and its barcode number is never used again. Only pieces in repair or in stock can be marked dead (not those on rent or sold).
+     */
+    public static function markDead(array $codes, string $note, ?int $userId): int
+    {
+        $codes = array_values(array_unique(array_filter(array_map('intval', $codes))));
+        if (!$codes) {
+            return 0;
+        }
+        return DB::transaction(function () use ($codes, $note, $userId) {
+            $ready = DB::table('devices')->whereIn('code', $codes)->whereIn('status', ['repair', 'in_stock'])->lockForUpdate()->pluck('code')->map(fn ($c) => (int) $c)->all();
+            if (!$ready) {
+                return 0;
+            }
+            DB::table('devices')->whereIn('code', $ready)->update(['status' => 'dead', 'customer_id' => null, 'rented_at' => null, 'return_by' => null, 'rent_no' => null]);
+            $now = now();
+            $text = 'Marked dead (written off)' . ($note !== '' ? ' · ' . $note : '');
+            foreach (array_chunk($ready, 500) as $chunk) {
+                DB::table('device_history')->insert(array_map(fn ($c) => ['code' => $c, 'at' => $now, 'text' => $text, 'user_id' => $userId], $chunk));
+            }
+            Audit::log('edit', 'dead', count($ready) === 1 ? Barcodes::text($ready[0]) : count($ready) . ' items', 'Marked dead' . ($note !== '' ? ': ' . $note : ''));
+            return count($ready);
+        });
+    }
+
+    /* A dead piece brought back (marked by mistake): it goes to "In repair". */
+    public static function reviveDead(int $code, ?int $userId): bool
+    {
+        $n = DB::table('devices')->where('code', $code)->where('status', 'dead')->update(['status' => 'repair']);
+        if ($n) {
+            self::addHistory($code, 'Brought back from dead, in repair', $userId);
+            Audit::log('edit', 'dead', Barcodes::text($code), 'Brought back from dead');
+        }
+        return $n > 0;
     }
 
     public static function addHistory(int $code, string $text, ?int $userId = null): int
